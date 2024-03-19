@@ -1,4 +1,5 @@
 # Maestro - A Framework for Claude Opus to Orchestrate Subagents
+![hero]([https://cdn.discordapp.com/attachments/1047006708813271100/1216931386032656445/im.jpeg?ex=66022eab&is=65efb9ab&hm=d472a26ec77b50ce5ee094578f888fa8b6c893bc523a5633f6987a850ae3b8d8&](https://media.discordapp.net/attachments/1047006708813271100/1219775931975995412/Magnific_Mar_19_Landscape_Robot_Maestro.jpeg?ex=660c87dc&is=65fa12dc&hm=973c6360ec9086600f12c00eec01b002025997be7e372d151bef840005293940&=&format=webp&width=1100&height=628))
 
 This Python script demonstrates an AI-assisted task breakdown and execution workflow using the Anthropic API. It utilizes two AI models, Opus and Haiku, to break down an objective into sub-tasks, execute each sub-task, and refine the results into a cohesive final output.
 
