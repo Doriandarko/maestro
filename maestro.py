@@ -140,6 +140,6 @@ timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 # Guard against filename too long OS errors by conditionally combining unique hash as prefix
 filename = f"{timestamp}_{sanitized_objective[:50]}.md" if len(sanitized_objective) > 50 else f"{timestamp}_{sanitized_objective}.md"
 
-with open(filename, 'w') as file:
+with open(filename, 'w', encoding='utf-8') as file:
     file.write(exchange_log)
 print(f"\nFull exchange log saved to {filename}")
