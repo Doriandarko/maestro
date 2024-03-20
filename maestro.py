@@ -1,3 +1,4 @@
+import os
 from anthropic import Anthropic
 import re
 from rich.console import Console
@@ -11,7 +12,7 @@ client = Anthropic(api_key="")
 console = Console()
 
 def opus_orchestrator(objective, previous_results=None):
-    console.print(f"\n[bold]Calling Opus for objective: {objective}[/bold]")
+    console.print(f"\n[bold]Calling Opus for your objective[/bold]")
     previous_results_text = "\n".join(previous_results) if previous_results else "None"
     messages = [
         {
@@ -59,7 +60,7 @@ def haiku_sub_agent(prompt, previous_haiku_tasks=None):
     return response_text
 
 def opus_refine(objective, sub_task_results):
-    print(f"\nCalling Opus to provide the refined final output for the objective: {objective}")
+    print(f"\nCalling Opus to provide the refined final output for your objective:")
     messages = [
         {
             "role": "user",
@@ -79,7 +80,26 @@ def opus_refine(objective, sub_task_results):
     console.print(Panel(response_text, title="[bold green]Final Output[/bold green]", title_align="left", border_style="green"))
     return response_text
 
-objective = input("Please enter your objective: ")
+def read_file(file_path):
+    with open(file_path, 'r') as file:
+        content = file.read()
+    return content
+
+# Get the objective from user input
+objective = input("Please enter your objective with or without a file path: ")
+
+# Check if the input contains a file path
+if "./" in objective or "/" in objective:
+    # Extract the file path from the objective
+    file_path = re.findall(r'[./\w]+\.[\w]+', objective)[0]
+    # Read the file content
+    with open(file_path, 'r') as file:
+        file_content = file.read()
+    # Update the objective string to include the instruction and file content
+    objective = f"{objective}\n\nFile content:\n{file_content}"
+else:
+    objective = objective
+    
 task_exchanges = []
 haiku_tasks = []
 
