@@ -2,9 +2,10 @@ from anthropic import Anthropic
 import re
 from rich.console import Console
 from rich.panel import Panel
+from datetime import datetime
 
 # Set up the Anthropic API client
-client = Anthropic(api_key="")
+client = Anthropic()
 
 # Initialize the Rich Console
 console = Console()
@@ -113,8 +114,12 @@ exchange_log += refined_output
 
 console.print(f"\n[bold]Refined Final output:[/bold]\n{refined_output}")
 
-# Save the full exchange log to a file
-filename = re.sub(r'\W+', '_', objective) + ".md"
+sanitized_objective = re.sub(r'\W+', '_', objective)
+# Create a unique identifier of objective
+timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+# Guard against filename too long OS errors by conditionally combining unique hash as prefix
+filename = f"{timestamp}_{sanitized_objective[:50]}.md" if len(sanitized_objective) > 50 else f"{timestamp}_{sanitized_objective}.md"
+
 with open(filename, 'w') as file:
     file.write(exchange_log)
 print(f"\nFull exchange log saved to {filename}")
