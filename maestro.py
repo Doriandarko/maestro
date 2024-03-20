@@ -1,10 +1,14 @@
+# taken from https://github.com/Doriandarko/maestro/blob/main/maestro.py
+
 from anthropic import Anthropic
 import re
 from rich.console import Console
 from rich.panel import Panel
+import os
+from pathlib import Path
 
 # Set up the Anthropic API client
-client = Anthropic(api_key="")
+client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 # Initialize the Rich Console
 console = Console()
@@ -78,7 +82,21 @@ def opus_refine(objective, sub_task_results):
     console.print(Panel(response_text, title="[bold green]Final Output[/bold green]", title_align="left", border_style="green"))
     return response_text
 
+def legal_markdown_filename_from_string(string, max_length=255):
+    SUFFIX = ".md"
+    # Replace invalid characters with underscores
+    sanitized_name = re.sub(r'[ <>:"/\\|?*]', '_', string)
+        
+    # Truncate the filename if it exceeds the maximum length
+    max_stem_length = max_length - len(SUFFIX)
+    if len(sanitized_name) > max_stem_length:
+        sanitized_name = sanitized_name[:max_stem_length]
+    
+    return Path(sanitized_name + SUFFIX)
+
+
 objective = input("Please enter your objective: ")
+
 task_exchanges = []
 haiku_tasks = []
 
@@ -113,8 +131,9 @@ exchange_log += refined_output
 
 console.print(f"\n[bold]Refined Final output:[/bold]\n{refined_output}")
 
-# Save the full exchange log to a file
-filename = re.sub(r'\W+', '_', objective) + ".md"
+# ensure we don't create a filename too large for the OS
+filename = legal_markdown_filename_from_string(objective)
+
 with open(filename, 'w') as file:
     file.write(exchange_log)
 print(f"\nFull exchange log saved to {filename}")
