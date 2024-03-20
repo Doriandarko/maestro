@@ -86,7 +86,7 @@ def read_file(file_path):
     return content
 
 # Get the objective from user input
-objective = input("Please enter your objective with or without a file path: ")
+objective = input("Please enter your objective with or without a text file path: ")
 
 # Check if the input contains a file path
 if "./" in objective or "/" in objective:
