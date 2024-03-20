@@ -2,6 +2,7 @@ from anthropic import Anthropic
 import re
 from rich.console import Console
 from rich.panel import Panel
+import hashlib
 
 # Set up the Anthropic API client
 client = Anthropic(api_key="")
@@ -114,7 +115,13 @@ exchange_log += refined_output
 console.print(f"\n[bold]Refined Final output:[/bold]\n{refined_output}")
 
 # Save the full exchange log to a file
-filename = re.sub(r'\W+', '_', objective) + ".md"
+# Ensure the objective doesn't contain any special characters
+sanitized_objective = re.sub(r'\W+', '_', objective)
+# Create a unique identifier of objective
+filename_hash_prefix = hashlib.md5(sanitized_objective.encode('utf-8')).hexdigest()
+
+filename = f"{filename_hash_prefix}_{sanitized_objective[:50]}.md" if len(sanitized_objective) > 50 else f"{filename_hash_prefix}_{sanitized_objective}.md"
+
 with open(filename, 'w') as file:
     file.write(exchange_log)
 print(f"\nFull exchange log saved to {filename}")
