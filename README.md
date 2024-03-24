@@ -12,7 +12,7 @@ This Python script demonstrates an AI-assisted task breakdown and execution work
 - Generates a detailed exchange log capturing the entire task breakdown and execution process
 - Saves the exchange log to a Markdown file for easy reference
 - Utilizes an improved prompt for the Opus model to better assess task completion
-- Introduces a specific phrase, "The task is complete:", to indicate when the objective is fully achieved
+- Creates code files when working on code projects.
 
 ## Prerequisites
 
