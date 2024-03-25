@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "maestro"
+version = "0.1.0"
+description = "A framework for Claude Opus to intelligently orchestrate subagents."
+authors = ["Erik Nomitch <enomitch@gmail.com>"]
+license = "Pietro Schirano"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+anthropic = "^0.21.3"
+python-dotenv = "^1.0.1"
+rich = "^13.7.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

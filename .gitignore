@@ -177,3 +177,4 @@ pyrightconfig.json
 
 .env
 .env.*
+.aider*
