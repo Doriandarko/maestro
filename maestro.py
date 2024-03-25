@@ -4,9 +4,18 @@ import re
 from rich.console import Console
 from rich.panel import Panel
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load the environment variables
+load_dotenv()
+
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+
+if not ANTHROPIC_API_KEY or ANTHROPIC_API_KEY == "":
+    raise ValueError("API key for the Anthropic API not found in the environment variables. Set the 'ANTHROPIC_API_KEY' in a .env file.")
 
 # Set up the Anthropic API client
-client = Anthropic(api_key="")
+client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
 # Initialize the Rich Console
 console = Console()
