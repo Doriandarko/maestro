@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "src"
+version = "1.0.0"
+description = ""
+authors = []
+
+[tool.poetry.dependencies]
+python = "~3.12.0"
+requests = "^2.31.0"
+anthropic="*"
+rich="*"
+
+[tool.poetry.dev-dependencies]
+pytest = "~7.4.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

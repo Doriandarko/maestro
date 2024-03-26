@@ -18,17 +18,42 @@ This Python script demonstrates an AI-assisted task breakdown and execution work
 
 To run this script, you need to have the following:
 
-- Python installed
 - Anthropic API key
-- Required Python packages: `anthropic` and `rich`
 
 ## Installation
 
-1. Clone the repository or download the script file.
-2. Install the required Python packages by running the following command:
+1. Clone the repository 
+2. Install [Python](https://www.python.org/), For example, on macOS, you can install Python 3.12 using Homebrew:
 
-```bash
-pip install anthropic rich
+```shell
+$ brew install python@3.12
+```
+3. Install [Poetry](https://python-poetry.org/) For example, on macOS, you can install Poetry using Homebrew:
+
+```shell
+$ brew install poetry
+```
+4. Configure virtual environments to be project-local.
+```shell
+$ poetry config virtualenvs.in-project true
+$ poetry config --list
+cache-dir = "/Users/<username>/Library/Caches/pypoetry"
+experimental.new-installer = true
+installer.parallel = true
+virtualenvs.create = true
+virtualenvs.in-project = true
+virtualenvs.path = "{cache-dir}/virtualenvs"  # /Users/<username>/Library/Caches/pypoetry/virtualenvs
+```
+5. Initialize the virtual environment.
+
+```shell
+$ poetry env use python3.12
+...
+$ poetry install
+Creating virtualenv src in <ROOT>/.venv
+Updating dependencies
+...
+Installing the current project: src (0.0.0)
 ```
 
 3. Replace the placeholder API key in the script with your actual Anthropic API key:
@@ -78,6 +103,25 @@ You can customize the script according to your needs:
 - Change the models to what you prefer, like replacing Haiku with Sonnet or Opus.
 - Modify the console output formatting by updating the rich library's Panel and Console configurations.
 - Customize the exchange log formatting and file extension by modifying the relevant code sections.
+
+## Running in IntelliJ
+
+Prior to setting-up IntelliJ, make sure the virtual environment has been initialized.
+
+* Open the project
+* Navigate to **File > Project Structure...**
+    * Navigate to **Platform Settings > SDKs**
+        * Click the "+" symbol to **Add Python SDK...**
+        * Select **Virtualenv Environment** on the left
+        * Select **Existing environment**
+            * For **Interpreter**, use the Python executable in the installed virtual environment (e.g. `<ROOT>/.venv/bin/python`)
+            * Submit the new SDK
+    * Navigate to **Project Settings > Modules**
+        * Click the "+" symbol to **Add New Module...**
+        * Select a type of **Python** on the left
+        * For **Module SDK**, select the newly created SDK
+        * For **Content root**, select `<ROOT>`
+
 
 ## License
 
