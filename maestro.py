@@ -4,6 +4,7 @@ import re
 from rich.console import Console
 from rich.panel import Panel
 from datetime import datetime
+import json
 
 # Set up the Anthropic API client
 client = Anthropic(api_key="")
