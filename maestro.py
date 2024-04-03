@@ -12,14 +12,16 @@ client = Anthropic(api_key="")
 # Initialize the Rich Console
 console = Console()
 
-def opus_orchestrator(objective, previous_results=None):
-    console.print(f"\n[bold]Calling Opus for your objective[/bold]")
+def opus_orchestrator(objective, file_content=None, previous_results=None):
+    console.print(f"\n[bold]Calling Orchestrator for your objective[/bold]")
     previous_results_text = "\n".join(previous_results) if previous_results else "None"
+    if file_content:
+        console.print(Panel(f"File content:\n{file_content}", title="[bold blue]File Content[/bold blue]", title_align="left", border_style="blue"))
     messages = [
         {
             "role": "user",
             "content": [
-                {"type": "text", "text": f"Based on the following objective and the previous sub-task results (if any), please break down the objective into the next sub-task, and create a concise and detailed prompt for a subagent so it can execute that task, please assess if the objective has been fully achieved. If the previous sub-task results comprehensively address all aspects of the objective, include the phrase 'The task is complete:' at the beginning of your response. If the objective is not yet fully achieved, break it down into the next sub-task and create a concise and detailed prompt for a subagent to execute that task.:\n\nObjective: {objective}\n\nPrevious sub-task results:\n{previous_results_text}"}
+                {"type": "text", "text": f"Based on the following objective{' and file content' if file_content else ''}, and the previous sub-task results (if any), please break down the objective into the next sub-task, and create a concise and detailed prompt for a subagent so it can execute that task. Please assess if the objective has been fully achieved. If the previous sub-task results comprehensively address all aspects of the objective, include the phrase 'The task is complete:' at the beginning of your response. If the objective is not yet fully achieved, break it down into the next sub-task and create a concise and detailed prompt for a subagent to execute that task.:\n\nObjective: {objective}" + ('\\nFile content:\\n' + file_content if file_content else '') + f"\n\nPrevious sub-task results:\n{previous_results_text}"}
             ]
         }
     ]
@@ -32,7 +34,7 @@ def opus_orchestrator(objective, previous_results=None):
 
     response_text = opus_response.content[0].text
     console.print(Panel(response_text, title=f"[bold green]Opus Orchestrator[/bold green]", title_align="left", border_style="green", subtitle="Sending task to Haiku 👇"))
-    return response_text
+    return response_text, file_content
 
 def haiku_sub_agent(prompt, previous_haiku_tasks=None):
     if previous_haiku_tasks is None:
@@ -130,18 +132,22 @@ if "./" in objective or "/" in objective:
     # Read the file content
     with open(file_path, 'r') as file:
         file_content = file.read()
-    # Update the objective string to include the instruction and file content
-    objective = f"{objective}\n\nFile content:\n{file_content}"
+    # Update the objective string to remove the file path
+    objective = objective.split(file_path)[0].strip()
 else:
-    objective = objective
+    file_content = None
 
 task_exchanges = []
 haiku_tasks = []
 
 while True:
-    # Call Opus to break down the objective into the next sub-task or provide the final output
+    # Call Orchestrator to break down the objective into the next sub-task or provide the final output
     previous_results = [result for _, result in task_exchanges]
-    opus_result = opus_orchestrator(objective, previous_results)
+    if not task_exchanges:
+        # Pass the file content only in the first iteration if available
+        opus_result, file_content_for_haiku = opus_orchestrator(objective, file_content, previous_results)
+    else:
+        opus_result, _ = opus_orchestrator(objective, previous_results=previous_results)
 
     if "The task is complete:" in opus_result:
         # If Opus indicates the task is complete, exit the loop
@@ -149,9 +155,14 @@ while True:
         break
     else:
         sub_task_prompt = opus_result
+        # Include file content in the first haiku_sub_agent call if available
+        if file_content_for_haiku and not haiku_tasks:
+            sub_task_prompt += "\n\nFile content:\n" + file_content_for_haiku
         sub_task_result = haiku_sub_agent(sub_task_prompt, haiku_tasks)
         haiku_tasks.append(f"Task: {sub_task_prompt}\nResult: {sub_task_result}")
         task_exchanges.append((sub_task_prompt, sub_task_result))
+        # Ensure file content is not passed in subsequent calls
+        file_content_for_haiku = None
 
 # Create the .md filename
 sanitized_objective = re.sub(r'\W+', '_', objective)
@@ -182,7 +193,7 @@ code_blocks = re.findall(r'Filename: (\S+)\s*```[\w]*\n(.*?)\n```', refined_outp
 create_folder_structure(project_name, folder_structure, code_blocks)
 
 # Truncate the sanitized_objective to a maximum of 50 characters
-max_length = 40
+max_length = 25
 truncated_objective = sanitized_objective[:max_length] if len(sanitized_objective) > max_length else sanitized_objective
 
 # Update the filename to include the project name
