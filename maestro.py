@@ -9,6 +9,20 @@ import json
 # Set up the Anthropic API client
 client = Anthropic(api_key="")
 
+def calculate_subagent_cost(model, input_tokens, output_tokens):
+    # Pricing information per model
+    pricing = {
+        "claude-3-opus-20240229": {"input_cost_per_mtok": 15.00, "output_cost_per_mtok": 75.00},
+        "claude-3-haiku-20240307": {"input_cost_per_mtok": 0.25, "output_cost_per_mtok": 1.25},
+    }
+
+    # Calculate cost
+    input_cost = (input_tokens / 1_000_000) * pricing[model]["input_cost_per_mtok"]
+    output_cost = (output_tokens / 1_000_000) * pricing[model]["output_cost_per_mtok"]
+    total_cost = input_cost + output_cost
+
+    return total_cost
+
 # Initialize the Rich Console
 console = Console()
 
@@ -33,14 +47,20 @@ def opus_orchestrator(objective, file_content=None, previous_results=None):
     )
 
     response_text = opus_response.content[0].text
+    console.print(f"Input Tokens: {opus_response.usage.input_tokens}, Output Tokens: {opus_response.usage.output_tokens}")
+    total_cost = calculate_subagent_cost("claude-3-opus-20240229", opus_response.usage.input_tokens, opus_response.usage.output_tokens)
+    console.print(f"Opus Orchestrator Cost: ${total_cost:.2f}")
     console.print(Panel(response_text, title=f"[bold green]Opus Orchestrator[/bold green]", title_align="left", border_style="green", subtitle="Sending task to Haiku 👇"))
     return response_text, file_content
 
-def haiku_sub_agent(prompt, previous_haiku_tasks=None):
+def haiku_sub_agent(prompt, previous_haiku_tasks=None, continuation=False):
     if previous_haiku_tasks is None:
         previous_haiku_tasks = []
 
-    system_message = "Previous Haiku tasks:\n" + "\n".join(previous_haiku_tasks)
+    continuation_prompt = "Continuing from the previous answer, please complete the response."
+    system_message = "Previous Haiku tasks:\n" + "\n".join(f"Task: {task['task']}\nResult: {task['result']}" for task in previous_haiku_tasks)
+    if continuation:
+        prompt = continuation_prompt
 
     messages = [
         {
@@ -59,10 +79,19 @@ def haiku_sub_agent(prompt, previous_haiku_tasks=None):
     )
 
     response_text = haiku_response.content[0].text
+    console.print(f"Input Tokens: {haiku_response.usage.input_tokens}, Output Tokens: {haiku_response.usage.output_tokens}")
+    total_cost = calculate_subagent_cost("claude-3-haiku-20240307", haiku_response.usage.input_tokens, haiku_response.usage.output_tokens)
+    console.print(f"Haiku Sub-agent Cost: ${total_cost:.2f}")
+
+    if haiku_response.usage.output_tokens >= 4000:  # Threshold set to 4000 as a precaution
+        console.print("[bold yellow]Warning:[/bold yellow] Output may be truncated. Attempting to continue the response.")
+        continuation_response_text = haiku_sub_agent(continuation_prompt, previous_haiku_tasks, continuation=True)
+        response_text += continuation_response_text
+
     console.print(Panel(response_text, title="[bold blue]Haiku Sub-agent Result[/bold blue]", title_align="left", border_style="blue", subtitle="Task completed, sending result to Opus 👇"))
     return response_text
 
-def opus_refine(objective, sub_task_results, filename, projectname):
+def opus_refine(objective, sub_task_results, filename, projectname, continuation=False):
   print("\nCalling Opus to provide the refined final output for your objective:")
   messages = [
       {
@@ -80,6 +109,17 @@ def opus_refine(objective, sub_task_results, filename, projectname):
   )
 
   response_text = opus_response.content[0].text
+  console.print(f"Input Tokens: {opus_response.usage.input_tokens}, Output Tokens: {opus_response.usage.output_tokens}")
+  total_cost = calculate_subagent_cost("claude-3-opus-20240229", opus_response.usage.input_tokens, opus_response.usage.output_tokens)
+  console.print(f"Opus Refine Cost: ${total_cost:.2f}")
+  console.print(Panel(response_text, title="[bold green]Final Output[/bold green]", title_align="left", border_style="green"))
+  
+
+  if opus_response.usage.output_tokens >= 4000:  # Threshold set to 4000 as a precaution
+        console.print("[bold yellow]Warning:[/bold yellow] Output may be truncated. Attempting to continue the response.")
+        continuation_response_text = opus_refine(objective, sub_task_results, filename, projectname, continuation=True)
+        response_text += continuation_response_text
+
   console.print(Panel(response_text, title="[bold green]Final Output[/bold green]", title_align="left", border_style="green"))
   return response_text
 
@@ -155,13 +195,16 @@ while True:
         break
     else:
         sub_task_prompt = opus_result
-        # Include file content in the first haiku_sub_agent call if available
+        # Append file content to the prompt for the initial call to haiku_sub_agent, if applicable
         if file_content_for_haiku and not haiku_tasks:
-            sub_task_prompt += "\n\nFile content:\n" + file_content_for_haiku
+            sub_task_prompt = f"{sub_task_prompt}\n\nFile content:\n{file_content_for_haiku}"
+        # Call haiku_sub_agent with the prepared prompt and record the result
         sub_task_result = haiku_sub_agent(sub_task_prompt, haiku_tasks)
-        haiku_tasks.append(f"Task: {sub_task_prompt}\nResult: {sub_task_result}")
+        # Log the task and its result for future reference
+        haiku_tasks.append({"task": sub_task_prompt, "result": sub_task_result})
+        # Record the exchange for processing and output generation
         task_exchanges.append((sub_task_prompt, sub_task_result))
-        # Ensure file content is not passed in subsequent calls
+        # Prevent file content from being included in future haiku_sub_agent calls
         file_content_for_haiku = None
 
 # Create the .md filename
