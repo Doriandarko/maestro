@@ -5,6 +5,7 @@ This Python script demonstrates an AI-assisted task breakdown and execution work
 
 ## New
 - SEARCH 🔍
+
   Now, when it's creating a task for its subagent, Claude Opus will perform a search and get the best answer to help the subagent solve that task even better.
 - Add support for GPT-4 as an orchestrator in maestro-gpt.py
 Simply
