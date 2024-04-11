@@ -4,9 +4,10 @@
 This Python script demonstrates an AI-assisted task breakdown and execution workflow using the Anthropic API. It utilizes two AI models, Opus and Haiku, to break down an objective into sub-tasks, execute each sub-task, and refine the results into a cohesive final output.
 
 ## New
+- SEARCH 🔍
+  Now, when it's creating a task for its subagent, Claude Opus will perform a search and get the best answer to help the subagent solve that task even better.
 - Add support for GPT-4 as an orchestrator in maestro-gpt.py
 Simply
-
 ```bash
 python maestro-gpt.py
 ```
@@ -39,7 +40,7 @@ To run this script, you need to have the following:
 2. Install the required Python packages by running the following command:
 
 ```bash
-pip install anthropic rich
+pip install -r requirements.txt
 ```
 
 3. Replace the placeholder API key in the script with your actual Anthropic API key:
