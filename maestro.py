@@ -83,17 +83,21 @@ def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, contin
     qna_response = None
     if search_query:
         # Initialize the Tavily client
-        tavily = TavilyClient(api_key="API KEY")
+        tavily = TavilyClient(api_key="YOUR API KEY")
 
         # Perform a QnA search based on the search query
         qna_response = tavily.qna_search(query=search_query)
         console.print(f"QnA response: {qna_response}", style="yellow")
 
+    if not prompt.strip() and not qna_response:
+        console.print("[bold yellow]Warning:[/bold yellow] Both prompt and search results are empty. Skipping API call.")
+        return "I apologize, but I don't have enough information to provide a helpful response. Please provide more context or details."
+
     messages = [
         {
             "role": "user",
             "content": [
-                {"type": "text", "text": prompt},
+                {"type": "text", "text": prompt.strip()},
                 {"type": "text", "text": f"\nSearch Results:\n{qna_response}" if qna_response else ""}
             ]
         }
