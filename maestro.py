@@ -56,9 +56,14 @@ def opus_orchestrator(objective, file_content=None, previous_results=None, use_s
     json_match = re.search(r'{.*}', response_text, re.DOTALL)
     if json_match:
         json_string = json_match.group()
-        search_query = json.loads(json_string)["search_query"]
-        console.print(Panel(f"Search Query: {search_query}", title="[bold blue]Search Query[/bold blue]", title_align="left", border_style="blue"))
-        response_text = response_text.replace(json_string, "").strip()
+        try:
+            search_query = json.loads(json_string)["search_query"]
+            console.print(Panel(f"Search Query: {search_query}", title="[bold blue]Search Query[/bold blue]", title_align="left", border_style="blue"))
+            response_text = response_text.replace(json_string, "").strip()
+        except json.JSONDecodeError as e:
+            console.print(Panel(f"Error parsing JSON: {e}", title="[bold red]JSON Parsing Error[/bold red]", title_align="left", border_style="red"))
+            console.print(Panel(f"Skipping search query extraction.", title="[bold yellow]Search Query Extraction Skipped[/bold yellow]", title_align="left", border_style="yellow"))
+            search_query = None
     else:
         search_query = None
 
@@ -78,7 +83,7 @@ def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, contin
     qna_response = None
     if search_query:
         # Initialize the Tavily client
-        tavily = TavilyClient(api_key="YOUR TAVIL API")
+        tavily = TavilyClient(api_key="API KEY")
 
         # Perform a QnA search based on the search query
         qna_response = tavily.qna_search(query=search_query)
@@ -101,50 +106,48 @@ def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, contin
         system=system_message
     )
 
-    response_text = haiku_response.content[0].text
+    response_text = haiku_response.content[0].text.strip()
     console.print(f"Input Tokens: {haiku_response.usage.input_tokens}, Output Tokens: {haiku_response.usage.output_tokens}")
     total_cost = calculate_subagent_cost("claude-3-haiku-20240307", haiku_response.usage.input_tokens, haiku_response.usage.output_tokens)
     console.print(f"Haiku Sub-agent Cost: ${total_cost:.2f}")
 
-    if haiku_response.usage.output_tokens >= 4000:  # Threshold set to 4000 as a precaution
+    if haiku_response.usage.output_tokens >= 4000 and not continuation:  # Threshold set to 4000 as a precaution
         console.print("[bold yellow]Warning:[/bold yellow] Output may be truncated. Attempting to continue the response.")
-        continuation_response_text = haiku_sub_agent(continuation_prompt, previous_haiku_tasks, continuation=True)
-        response_text += continuation_response_text
+        continuation_response_text = haiku_sub_agent(continuation_prompt, search_query, previous_haiku_tasks + [{"task": prompt, "result": response_text}], continuation=True)
+        response_text += "\n" + continuation_response_text
 
     console.print(Panel(response_text, title="[bold blue]Haiku Sub-agent Result[/bold blue]", title_align="left", border_style="blue", subtitle="Task completed, sending result to Opus 👇"))
     return response_text
 
 def opus_refine(objective, sub_task_results, filename, projectname, continuation=False):
-  print("\nCalling Opus to provide the refined final output for your objective:")
-  messages = [
-      {
-          "role": "user",
-          "content": [
-              {"type": "text", "text": "Objective: " + objective + "\n\nSub-task results:\n" + "\n".join(sub_task_results) + "\n\nPlease review and refine the sub-task results into a cohesive final output. Add any missing information or details as needed. When working on code projects, ONLY AND ONLY IF THE PROJECT IS CLEARLY A CODING ONE please provide the following:\n1. Project Name: Create a concise and appropriate project name that fits the project based on what it's creating. The project name should be no more than 20 characters long.\n2. Folder Structure: Provide the folder structure as a valid JSON object, where each key represents a folder or file, and nested keys represent subfolders. Use null values for files. Ensure the JSON is properly formatted without any syntax errors. Please make sure all keys are enclosed in double quotes, and ensure objects are correctly encapsulated with braces, separating items with commas as necessary.\nWrap the JSON object in <folder_structure> tags.\n3. Code Files: For each code file, include ONLY the file name NEVER EVER USE THE FILE PATH OR ANY OTHER FORMATTING YOU ONLY USE THE FOLLOWING format 'Filename: <filename>' followed by the code block enclosed in triple backticks, with the language identifier after the opening backticks, like this:\n\n​python\n<code>\n​"}
-          ]
-      }
-  ]
+    print("\nCalling Opus to provide the refined final output for your objective:")
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "Objective: " + objective + "\n\nSub-task results:\n" + "\n".join(sub_task_results) + "\n\nPlease review and refine the sub-task results into a cohesive final output. Add any missing information or details as needed. When working on code projects, ONLY AND ONLY IF THE PROJECT IS CLEARLY A CODING ONE please provide the following:\n1. Project Name: Create a concise and appropriate project name that fits the project based on what it's creating. The project name should be no more than 20 characters long.\n2. Folder Structure: Provide the folder structure as a valid JSON object, where each key represents a folder or file, and nested keys represent subfolders. Use null values for files. Ensure the JSON is properly formatted without any syntax errors. Please make sure all keys are enclosed in double quotes, and ensure objects are correctly encapsulated with braces, separating items with commas as necessary.\nWrap the JSON object in <folder_structure> tags.\n3. Code Files: For each code file, include ONLY the file name NEVER EVER USE THE FILE PATH OR ANY OTHER FORMATTING YOU ONLY USE THE FOLLOWING format 'Filename: <filename>' followed by the code block enclosed in triple backticks, with the language identifier after the opening backticks, like this:\n\n​python\n<code>\n​"}
+            ]
+        }
+    ]
 
-  opus_response = client.messages.create(
-      model="claude-3-opus-20240229",
-      max_tokens=4096,
-      messages=messages
-  )
+    opus_response = client.messages.create(
+        model="claude-3-opus-20240229",
+        max_tokens=4096,
+        messages=messages
+    )
 
-  response_text = opus_response.content[0].text
-  console.print(f"Input Tokens: {opus_response.usage.input_tokens}, Output Tokens: {opus_response.usage.output_tokens}")
-  total_cost = calculate_subagent_cost("claude-3-opus-20240229", opus_response.usage.input_tokens, opus_response.usage.output_tokens)
-  console.print(f"Opus Refine Cost: ${total_cost:.2f}")
-  console.print(Panel(response_text, title="[bold green]Final Output[/bold green]", title_align="left", border_style="green"))
-  
+    response_text = opus_response.content[0].text.strip()
+    console.print(f"Input Tokens: {opus_response.usage.input_tokens}, Output Tokens: {opus_response.usage.output_tokens}")
+    total_cost = calculate_subagent_cost("claude-3-opus-20240229", opus_response.usage.input_tokens, opus_response.usage.output_tokens)
+    console.print(f"Opus Refine Cost: ${total_cost:.2f}")
 
-  if opus_response.usage.output_tokens >= 4000:  # Threshold set to 4000 as a precaution
+    if opus_response.usage.output_tokens >= 4000 and not continuation:  # Threshold set to 4000 as a precaution
         console.print("[bold yellow]Warning:[/bold yellow] Output may be truncated. Attempting to continue the response.")
-        continuation_response_text = opus_refine(objective, sub_task_results, filename, projectname, continuation=True)
-        response_text += continuation_response_text
+        continuation_response_text = opus_refine(objective, sub_task_results + [response_text], filename, projectname, continuation=True)
+        response_text += "\n" + continuation_response_text
 
-  console.print(Panel(response_text, title="[bold green]Final Output[/bold green]", title_align="left", border_style="green"))
-  return response_text
+    console.print(Panel(response_text, title="[bold green]Final Output[/bold green]", title_align="left", border_style="green"))
+    return response_text
 
 def create_folder_structure(project_name, folder_structure, code_blocks):
     # Create the project folder
@@ -280,10 +283,6 @@ exchange_log += "=" * 40 + " Refined Final Output " + "=" * 40 + "\n\n"
 exchange_log += refined_output
 
 console.print(f"\n[bold]Refined Final output:[/bold]\n{refined_output}")
-
-with open(filename, 'w') as file:
-    file.write(exchange_log)
-print(f"\nFull exchange log saved to {filename}")
 
 with open(filename, 'w') as file:
     file.write(exchange_log)
