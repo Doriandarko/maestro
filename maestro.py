@@ -7,7 +7,7 @@ from datetime import datetime
 import json
 
 # Set up the Anthropic API client
-client = Anthropic(api_key="")
+client = Anthropic(api_key="YOUR API")
 
 def calculate_subagent_cost(model, input_tokens, output_tokens):
     # Pricing information per model
@@ -26,7 +26,7 @@ def calculate_subagent_cost(model, input_tokens, output_tokens):
 # Initialize the Rich Console
 console = Console()
 
-def opus_orchestrator(objective, file_content=None, previous_results=None):
+def opus_orchestrator(objective, file_content=None, previous_results=None, use_search=False):
     console.print(f"\n[bold]Calling Orchestrator for your objective[/bold]")
     previous_results_text = "\n".join(previous_results) if previous_results else "None"
     if file_content:
@@ -35,7 +35,8 @@ def opus_orchestrator(objective, file_content=None, previous_results=None):
         {
             "role": "user",
             "content": [
-                {"type": "text", "text": f"Based on the following objective{' and file content' if file_content else ''}, and the previous sub-task results (if any), please break down the objective into the next sub-task, and create a concise and detailed prompt for a subagent so it can execute that task. IMPORTANT!!! when dealing with code tasks make sure you check the code for errors and provide fixes and support as part of the next sub-task. If you find any bugs or have suggestions for better code, please include them in the next sub-task prompt. Please assess if the objective has been fully achieved. If the previous sub-task results comprehensively address all aspects of the objective, include the phrase 'The task is complete:' at the beginning of your response. If the objective is not yet fully achieved, break it down into the next sub-task and create a concise and detailed prompt for a subagent to execute that task.:\n\nObjective: {objective}" + ('\\nFile content:\\n' + file_content if file_content else '') + f"\n\nPrevious sub-task results:\n{previous_results_text}"}
+                {"type": "text", "text": f"Based on the following objective{' and file content' if file_content else ''}, and the previous sub-task results (if any), please break down the objective into the next sub-task, and create a concise and detailed prompt for a subagent so it can execute that task. IMPORTANT!!! when dealing with code tasks make sure you check the code for errors and provide fixes and support as part of the next sub-task. If you find any bugs or have suggestions for better code, please include them in the next sub-task prompt. Please assess if the objective has been fully achieved. If the previous sub-task results comprehensively address all aspects of the objective, include the phrase 'The task is complete:' at the beginning of your response. If the objective is not yet fully achieved, break it down into the next sub-task and create a concise and detailed prompt for a subagent to execute that task.:\n\nObjective: {objective}" + ('\\nFile content:\\n' + file_content if file_content else '') + f"\n\nPrevious sub-task results:\n{previous_results_text}"},
+                {"type": "text", "text": "Please also generate a JSON object containing a single 'search_query' key, which represents a question that, when asked online, would yield important information for solving the subtask. The question should be specific and targeted to elicit the most relevant and helpful resources. Format your JSON like this, with no additional text before or after:\n{\"search_query\": \"<question>\"}\n"}
             ]
         }
     ]
@@ -50,10 +51,22 @@ def opus_orchestrator(objective, file_content=None, previous_results=None):
     console.print(f"Input Tokens: {opus_response.usage.input_tokens}, Output Tokens: {opus_response.usage.output_tokens}")
     total_cost = calculate_subagent_cost("claude-3-opus-20240229", opus_response.usage.input_tokens, opus_response.usage.output_tokens)
     console.print(f"Opus Orchestrator Cost: ${total_cost:.2f}")
-    console.print(Panel(response_text, title=f"[bold green]Opus Orchestrator[/bold green]", title_align="left", border_style="green", subtitle="Sending task to Haiku 👇"))
-    return response_text, file_content
 
-def haiku_sub_agent(prompt, previous_haiku_tasks=None, continuation=False):
+    # Extract the JSON from the response
+    json_match = re.search(r'{.*}', response_text, re.DOTALL)
+    if json_match:
+        json_string = json_match.group()
+        search_query = json.loads(json_string)["search_query"]
+        console.print(Panel(f"Search Query: {search_query}", title="[bold blue]Search Query[/bold blue]", title_align="left", border_style="blue"))
+        response_text = response_text.replace(json_string, "").strip()
+    else:
+        search_query = None
+
+    console.print(Panel(response_text, title=f"[bold green]Opus Orchestrator[/bold green]", title_align="left", border_style="green", subtitle="Sending task to Haiku 👇"))
+    return response_text, file_content, search_query
+
+
+def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, continuation=False):
     if previous_haiku_tasks is None:
         previous_haiku_tasks = []
 
@@ -62,11 +75,21 @@ def haiku_sub_agent(prompt, previous_haiku_tasks=None, continuation=False):
     if continuation:
         prompt = continuation_prompt
 
+    qna_response = None
+    if search_query:
+        # Initialize the Tavily client
+        tavily = TavilyClient(api_key="YOUR TAVIL API")
+
+        # Perform a QnA search based on the search query
+        qna_response = tavily.qna_search(query=search_query)
+        console.print(f"QnA response: {qna_response}", style="yellow")
+
     messages = [
         {
             "role": "user",
             "content": [
-                {"type": "text", "text": prompt}
+                {"type": "text", "text": prompt},
+                {"type": "text", "text": f"\nSearch Results:\n{qna_response}" if qna_response else ""}
             ]
         }
     ]
@@ -177,6 +200,9 @@ if "./" in objective or "/" in objective:
 else:
     file_content = None
 
+# Ask the user if they want to use search
+use_search = input("Do you want to use search? (y/n): ").lower() == 'y'
+
 task_exchanges = []
 haiku_tasks = []
 
@@ -185,9 +211,9 @@ while True:
     previous_results = [result for _, result in task_exchanges]
     if not task_exchanges:
         # Pass the file content only in the first iteration if available
-        opus_result, file_content_for_haiku = opus_orchestrator(objective, file_content, previous_results)
+        opus_result, file_content_for_haiku, search_query = opus_orchestrator(objective, file_content, previous_results, use_search)
     else:
-        opus_result, _ = opus_orchestrator(objective, previous_results=previous_results)
+        opus_result, _, search_query = opus_orchestrator(objective, previous_results=previous_results, use_search=use_search)
 
     if "The task is complete:" in opus_result:
         # If Opus indicates the task is complete, exit the loop
@@ -198,8 +224,8 @@ while True:
         # Append file content to the prompt for the initial call to haiku_sub_agent, if applicable
         if file_content_for_haiku and not haiku_tasks:
             sub_task_prompt = f"{sub_task_prompt}\n\nFile content:\n{file_content_for_haiku}"
-        # Call haiku_sub_agent with the prepared prompt and record the result
-        sub_task_result = haiku_sub_agent(sub_task_prompt, haiku_tasks)
+        # Call haiku_sub_agent with the prepared prompt, search query, and record the result
+        sub_task_result = haiku_sub_agent(sub_task_prompt, search_query, haiku_tasks)
         # Log the task and its result for future reference
         haiku_tasks.append({"task": sub_task_prompt, "result": sub_task_result})
         # Record the exchange for processing and output generation
@@ -254,6 +280,10 @@ exchange_log += "=" * 40 + " Refined Final Output " + "=" * 40 + "\n\n"
 exchange_log += refined_output
 
 console.print(f"\n[bold]Refined Final output:[/bold]\n{refined_output}")
+
+with open(filename, 'w') as file:
+    file.write(exchange_log)
+print(f"\nFull exchange log saved to {filename}")
 
 with open(filename, 'w') as file:
     file.write(exchange_log)
