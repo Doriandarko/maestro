@@ -57,6 +57,11 @@ pip install -r requirements.txt
 client = Anthropic(api_key="YOUR_API_KEY_HERE")
 ```
 
+If using search, replace your Tavil API
+```python
+tavily = TavilyClient(api_key="YOUR API KEY HERE")
+```
+
 ## Usage
 
 1. Open a terminal or command prompt and navigate to the directory containing the script.
