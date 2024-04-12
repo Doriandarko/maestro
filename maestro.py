@@ -31,15 +31,17 @@ def opus_orchestrator(objective, file_content=None, previous_results=None, use_s
     previous_results_text = "\n".join(previous_results) if previous_results else "None"
     if file_content:
         console.print(Panel(f"File content:\n{file_content}", title="[bold blue]File Content[/bold blue]", title_align="left", border_style="blue"))
+    
     messages = [
         {
             "role": "user",
             "content": [
-                {"type": "text", "text": f"Based on the following objective{' and file content' if file_content else ''}, and the previous sub-task results (if any), please break down the objective into the next sub-task, and create a concise and detailed prompt for a subagent so it can execute that task. IMPORTANT!!! when dealing with code tasks make sure you check the code for errors and provide fixes and support as part of the next sub-task. If you find any bugs or have suggestions for better code, please include them in the next sub-task prompt. Please assess if the objective has been fully achieved. If the previous sub-task results comprehensively address all aspects of the objective, include the phrase 'The task is complete:' at the beginning of your response. If the objective is not yet fully achieved, break it down into the next sub-task and create a concise and detailed prompt for a subagent to execute that task.:\n\nObjective: {objective}" + ('\\nFile content:\\n' + file_content if file_content else '') + f"\n\nPrevious sub-task results:\n{previous_results_text}"},
-                {"type": "text", "text": "Please also generate a JSON object containing a single 'search_query' key, which represents a question that, when asked online, would yield important information for solving the subtask. The question should be specific and targeted to elicit the most relevant and helpful resources. Format your JSON like this, with no additional text before or after:\n{\"search_query\": \"<question>\"}\n"}
+                {"type": "text", "text": f"Based on the following objective{' and file content' if file_content else ''}, and the previous sub-task results (if any), please break down the objective into the next sub-task, and create a concise and detailed prompt for a subagent so it can execute that task. IMPORTANT!!! when dealing with code tasks make sure you check the code for errors and provide fixes and support as part of the next sub-task. If you find any bugs or have suggestions for better code, please include them in the next sub-task prompt. Please assess if the objective has been fully achieved. If the previous sub-task results comprehensively address all aspects of the objective, include the phrase 'The task is complete:' at the beginning of your response. If the objective is not yet fully achieved, break it down into the next sub-task and create a concise and detailed prompt for a subagent to execute that task.:\n\nObjective: {objective}" + ('\\nFile content:\\n' + file_content if file_content else '') + f"\n\nPrevious sub-task results:\n{previous_results_text}"}
             ]
         }
     ]
+    if use_search:
+        messages[0]["content"].append({"type": "text", "text": "Please also generate a JSON object containing a single 'search_query' key, which represents a question that, when asked online, would yield important information for solving the subtask. The question should be specific and targeted to elicit the most relevant and helpful resources. Format your JSON like this, with no additional text before or after:\n{\"search_query\": \"<question>\"}\n"})
 
     opus_response = client.messages.create(
         model="claude-3-opus-20240229",
@@ -52,26 +54,27 @@ def opus_orchestrator(objective, file_content=None, previous_results=None, use_s
     total_cost = calculate_subagent_cost("claude-3-opus-20240229", opus_response.usage.input_tokens, opus_response.usage.output_tokens)
     console.print(f"Opus Orchestrator Cost: ${total_cost:.2f}")
 
-    # Extract the JSON from the response
-    json_match = re.search(r'{.*}', response_text, re.DOTALL)
-    if json_match:
-        json_string = json_match.group()
-        try:
-            search_query = json.loads(json_string)["search_query"]
-            console.print(Panel(f"Search Query: {search_query}", title="[bold blue]Search Query[/bold blue]", title_align="left", border_style="blue"))
-            response_text = response_text.replace(json_string, "").strip()
-        except json.JSONDecodeError as e:
-            console.print(Panel(f"Error parsing JSON: {e}", title="[bold red]JSON Parsing Error[/bold red]", title_align="left", border_style="red"))
-            console.print(Panel(f"Skipping search query extraction.", title="[bold yellow]Search Query Extraction Skipped[/bold yellow]", title_align="left", border_style="yellow"))
+    search_query = None
+    if use_search:
+        # Extract the JSON from the response
+        json_match = re.search(r'{.*}', response_text, re.DOTALL)
+        if json_match:
+            json_string = json_match.group()
+            try:
+                search_query = json.loads(json_string)["search_query"]
+                console.print(Panel(f"Search Query: {search_query}", title="[bold blue]Search Query[/bold blue]", title_align="left", border_style="blue"))
+                response_text = response_text.replace(json_string, "").strip()
+            except json.JSONDecodeError as e:
+                console.print(Panel(f"Error parsing JSON: {e}", title="[bold red]JSON Parsing Error[/bold red]", title_align="left", border_style="red"))
+                console.print(Panel(f"Skipping search query extraction.", title="[bold yellow]Search Query Extraction Skipped[/bold yellow]", title_align="left", border_style="yellow"))
+        else:
             search_query = None
-    else:
-        search_query = None
 
     console.print(Panel(response_text, title=f"[bold green]Opus Orchestrator[/bold green]", title_align="left", border_style="green", subtitle="Sending task to Haiku 👇"))
     return response_text, file_content, search_query
 
 
-def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, continuation=False):
+def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, continuation=False, use_search=False):
     if previous_haiku_tasks is None:
         previous_haiku_tasks = []
 
@@ -81,7 +84,7 @@ def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, contin
         prompt = continuation_prompt
 
     qna_response = None
-    if search_query:
+    if search_query and use_search:
         # Initialize the Tavily client
         tavily = TavilyClient(api_key="YOUR API KEY")
 
@@ -93,15 +96,18 @@ def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, contin
         console.print("[bold yellow]Warning:[/bold yellow] Both prompt and search results are empty. Skipping API call.")
         return "I apologize, but I don't have enough information to provide a helpful response. Please provide more context or details."
 
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {"type": "text", "text": prompt.strip()},
-                {"type": "text", "text": f"\nSearch Results:\n{qna_response}" if qna_response else ""}
-            ]
-        }
-    ]
+    # Construct the messages list ensuring no empty text blocks
+    content_blocks = []
+    if prompt.strip():
+        content_blocks.append({"type": "text", "text": prompt.strip()})
+    if qna_response and use_search:
+        content_blocks.append({"type": "text", "text": f"\nSearch Results:\n{qna_response}"})
+
+    if not content_blocks:
+        console.print("[bold yellow]Warning:[/bold yellow] No valid content for API call.")
+        return "No content available to process."
+
+    messages = [{"role": "user", "content": content_blocks}]
 
     haiku_response = client.messages.create(
         model="claude-3-haiku-20240307",
@@ -117,7 +123,7 @@ def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, contin
 
     if haiku_response.usage.output_tokens >= 4000 and not continuation:  # Threshold set to 4000 as a precaution
         console.print("[bold yellow]Warning:[/bold yellow] Output may be truncated. Attempting to continue the response.")
-        continuation_response_text = haiku_sub_agent(continuation_prompt, search_query, previous_haiku_tasks + [{"task": prompt, "result": response_text}], continuation=True)
+        continuation_response_text = haiku_sub_agent(continuation_prompt, search_query, previous_haiku_tasks + [{"task": prompt, "result": response_text}], continuation=True, use_search=use_search)
         response_text += "\n" + continuation_response_text
 
     console.print(Panel(response_text, title="[bold blue]Haiku Sub-agent Result[/bold blue]", title_align="left", border_style="blue", subtitle="Task completed, sending result to Opus 👇"))
