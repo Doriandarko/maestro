@@ -5,6 +5,7 @@ from rich.console import Console
 from rich.panel import Panel
 from datetime import datetime
 import json
+from tavily import TavilyClient
 
 # Set up the Anthropic API client
 client = Anthropic(api_key="YOUR API")
