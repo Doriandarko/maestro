@@ -75,7 +75,7 @@ def opus_orchestrator(objective, file_content=None, previous_results=None, use_s
     return response_text, file_content, search_query
 
 
-def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, continuation=False, use_search=False):
+def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, use_search=False, continuation=False):
     if previous_haiku_tasks is None:
         previous_haiku_tasks = []
 
@@ -88,27 +88,19 @@ def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, contin
     if search_query and use_search:
         # Initialize the Tavily client
         tavily = TavilyClient(api_key="YOUR API KEY")
-
         # Perform a QnA search based on the search query
         qna_response = tavily.qna_search(query=search_query)
         console.print(f"QnA response: {qna_response}", style="yellow")
 
-    if not prompt.strip() and not qna_response:
-        console.print("[bold yellow]Warning:[/bold yellow] Both prompt and search results are empty. Skipping API call.")
-        return "I apologize, but I don't have enough information to provide a helpful response. Please provide more context or details."
-
-    # Construct the messages list ensuring no empty text blocks
-    content_blocks = []
-    if prompt.strip():
-        content_blocks.append({"type": "text", "text": prompt.strip()})
-    if qna_response and use_search:
-        content_blocks.append({"type": "text", "text": f"\nSearch Results:\n{qna_response}"})
-
-    if not content_blocks:
-        console.print("[bold yellow]Warning:[/bold yellow] No valid content for API call.")
-        return "No content available to process."
-
-    messages = [{"role": "user", "content": content_blocks}]
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt},
+                {"type": "text", "text": f"\nSearch Results:\n{qna_response}" if qna_response else ""}
+            ]
+        }
+    ]
 
     haiku_response = client.messages.create(
         model="claude-3-haiku-20240307",
@@ -117,15 +109,15 @@ def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, contin
         system=system_message
     )
 
-    response_text = haiku_response.content[0].text.strip()
+    response_text = haiku_response.content[0].text
     console.print(f"Input Tokens: {haiku_response.usage.input_tokens}, Output Tokens: {haiku_response.usage.output_tokens}")
     total_cost = calculate_subagent_cost("claude-3-haiku-20240307", haiku_response.usage.input_tokens, haiku_response.usage.output_tokens)
     console.print(f"Haiku Sub-agent Cost: ${total_cost:.2f}")
 
-    if haiku_response.usage.output_tokens >= 4000 and not continuation:  # Threshold set to 4000 as a precaution
+    if haiku_response.usage.output_tokens >= 4000:  # Threshold set to 4000 as a precaution
         console.print("[bold yellow]Warning:[/bold yellow] Output may be truncated. Attempting to continue the response.")
-        continuation_response_text = haiku_sub_agent(continuation_prompt, search_query, previous_haiku_tasks + [{"task": prompt, "result": response_text}], continuation=True, use_search=use_search)
-        response_text += "\n" + continuation_response_text
+        continuation_response_text = haiku_sub_agent(prompt, search_query, previous_haiku_tasks, use_search, continuation=True)
+        response_text += continuation_response_text
 
     console.print(Panel(response_text, title="[bold blue]Haiku Sub-agent Result[/bold blue]", title_align="left", border_style="blue", subtitle="Task completed, sending result to Opus 👇"))
     return response_text
@@ -239,7 +231,7 @@ while True:
         if file_content_for_haiku and not haiku_tasks:
             sub_task_prompt = f"{sub_task_prompt}\n\nFile content:\n{file_content_for_haiku}"
         # Call haiku_sub_agent with the prepared prompt, search query, and record the result
-        sub_task_result = haiku_sub_agent(sub_task_prompt, search_query, haiku_tasks)
+        sub_task_result = haiku_sub_agent(sub_task_prompt, search_query, haiku_tasks, use_search)
         # Log the task and its result for future reference
         haiku_tasks.append({"task": sub_task_prompt, "result": sub_task_result})
         # Record the exchange for processing and output generation
