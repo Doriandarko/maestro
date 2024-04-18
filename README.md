@@ -11,9 +11,12 @@ Before running the script
 Install Ollama client from here
 https://ollama.com/download
 
+then
+
 ```bash
 pip install ollama
 ```
+And 
 
 ```bash
 ollama.pull('llama3:70b')
