@@ -10,11 +10,15 @@ from ollama import Client  # Import the Ollama client
 # Only for the first time run based on the model you want to use
 # ollama.pull('llama3:70b')
 # ollama.pull('llama3:8b')
+# ollama.pull('llama3:8b')
+# ollama.pull('llama3:70b-instruct')
+# ollama.pull('llama3:instruct')
+
 
 # Define model identifiers as variables at the top of the script
-ORCHESTRATOR_MODEL = 'llama3:70b'
-SUBAGENT_MODEL = 'llama3:8b'
-REFINER_MODEL = 'llama3:70b'
+ORCHESTRATOR_MODEL = 'llama3:70b-instruct'
+SUBAGENT_MODEL = 'llama3:instruct'
+REFINER_MODEL = 'llama3:70b-instruct'
 
 
 # Initialize the Ollama client
@@ -33,7 +37,7 @@ def opus_orchestrator(objective, file_content=None, previous_results=None):
         messages=[
             {
                 "role": "user",
-                "content": f"Based on the following objective{' and file content' if file_content else ''}, and the previous sub-task results (if any), please break down the objective into the next sub-task, and create a concise and detailed prompt for a subagent so it can execute that task. IMPORTANT!!! when dealing with code tasks make sure you check the code for errors and provide fixes and support as part of the next sub-task. If you find any bugs or have suggestions for better code, please include them in the next sub-task prompt. Please assess if the objective has been fully achieved. If the previous sub-task results comprehensively address all aspects of the objective, include the phrase 'The task is complete:' at the beginning of your response. If the objective is not yet fully achieved, break it down into the next sub-task and create a concise and detailed prompt for a subagent to execute that task.DO NOT GET INTO UNPRODUCTIVE CONVERSATION ONCE YOU FEEL THE TASK IS COMOPLETE MAKE SURE YOU SAY IT THAT IS YOUR MAIN GOAL DO NOT WASTE TIME ON UNPRODUCTIVE CONVERSATIONS.:\n\nObjective: {objective}" + ('\\nFile content:\\n' + file_content if file_content else '') + f"\n\nPrevious sub-task results:\n{previous_results_text}"
+                "content": f"Based on the following objective{' and file content' if file_content else ''}, and the previous sub-task results (if any), please break down the objective into the next sub-task, and create a concise and detailed prompt for a subagent so it can execute that task. Focus solely on the objective and avoid engaging in casual conversation with the subagent.\n\nWhen dealing with code tasks, make sure to check the code for errors and provide fixes and support as part of the next sub-task. If you find any bugs or have suggestions for better code, please include them in the next sub-task prompt.\n\nPlease assess if the objective has been fully achieved. If the previous sub-task results comprehensively address all aspects of the objective, include the phrase 'The task is complete:' at the beginning of your response. If the objective is not yet fully achieved, break it down into the next sub-task and create a concise and detailed prompt for a subagent to execute that task.\n\nObjective: {objective}" + (f'\nFile content:\n{file_content}' if file_content else '') + f"\n\nPrevious sub-task results:\n{previous_results_text}"
             }
         ]
     )
@@ -83,7 +87,7 @@ def opus_refine(objective, sub_task_results, filename, projectname, continuation
         messages=[
             {
                 "role": "user",
-                "content": "Objective: " + objective + "\n\nSub-task results:\n" + "\n".join(sub_task_results) + "\n\nPlease review and refine the sub-task results into a cohesive final output. Add any missing information or details as needed. When working on code projects, ONLY AND ONLY IF THE PROJECT IS CLEARLY A CODING ONE please provide the following:\n1. Project Name: Create a concise and appropriate project name that fits the project based on what it's creating. The project name should be no more than 20 characters long.\n2. Folder Structure: Provide the folder structure as a valid JSON object, where each key represents a folder or file, and nested keys represent subfolders. Use null values for files. Ensure the JSON is properly formatted without any syntax errors. Please make sure all keys are enclosed in double quotes, and ensure objects are correctly encapsulated with braces, separating items with commas as necessary.\nWrap the JSON object in <folder_structure> tags.\n3. Code Files: For each code file, include ONLY the file name NEVER EVER USE THE FILE PATH OR ANY OTHER FORMATTING YOU ONLY USE THE FOLLOWING format 'Filename: <filename>' followed by the code block enclosed in triple backticks, with the language identifier after the opening backticks, like this:\n\n​python\n<code>\n​"
+                "content": "Objective: " + objective + "\n\nSub-task results:\n" + "\n".join(sub_task_results) + "\n\nPlease review and refine the sub-task results into a cohesive final output. Add any missing information or details as needed.\n\nWhen working on code projects, ONLY AND ONLY IF THE PROJECT IS CLEARLY A CODING ONE, please provide the following:\n\n1. Project Name: Create a concise and appropriate project name that fits the project based on what it's creating. The project name should be no more than 20 characters long.\n\n2. Folder Structure: Provide the folder structure as a valid JSON object, where each key represents a folder or file, and nested keys represent subfolders. Use null values for files. Ensure the JSON is properly formatted without any syntax errors. Please make sure all keys are enclosed in double quotes, and ensure objects are correctly encapsulated with braces, separating items with commas as necessary. Wrap the JSON object in <folder_structure> tags.\n\n3. Code Files: For each code file, include ONLY the file name, NEVER EVER USE THE FILE PATH OR ANY OTHER FORMATTING. YOU ONLY USE THE FOLLOWING format 'Filename: <filename>' followed by the code block enclosed in triple backticks, with the language identifier after the opening backticks, like this:\n\npython\n<code>\n\n\nFocus solely on the objective and avoid engaging in casual conversation. Ensure the final output is clear, concise, and addresses all aspects of the objective.​"
             }
         ]
     )
