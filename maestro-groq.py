@@ -64,6 +64,7 @@ def subagent(prompt, previous_subagent_tasks=None):
 
     subagent_response = client.chat.completions.create(
         model=subagent_model,
+        max_tokens=4096,
         messages=messages
     )
     response_text = subagent_response.choices[0].message.content
