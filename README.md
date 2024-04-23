@@ -1,7 +1,57 @@
-# Maestro - A Framework for Claude Opus to Orchestrate Subagents
-![hero](https://media.discordapp.net/attachments/1047006708813271100/1219776508864893088/DALLE_Mar_19_Landscape_Robot_Maestro_1.webp?ex=660c8866&is=65fa1366&hm=c49736c7547a81e3fa5ae63ed099a62496b2bbc6489cc2381e8833f815d3aa97&=&format=webp&width=3220&height=1840)
+# Maestro - A Framework for Claude Opus, GPT and local LLMs to Orchestrate Subagents
+
 
 This Python script demonstrates an AI-assisted task breakdown and execution workflow using the Anthropic API. It utilizes two AI models, Opus and Haiku, to break down an objective into sub-tasks, execute each sub-task, and refine the results into a cohesive final output.
+
+## New
+Mestro now runs locally thanks to the Ollama platform. Experience the power of Llama 3 locally! 
+
+Before running the script
+
+Install Ollama client from here
+https://ollama.com/download
+
+then
+
+```bash
+pip install ollama
+```
+And 
+
+```bash
+ollama.pull('llama3:70b')
+```
+This will depend on the model you want to use it, you only need to do it once or if you want to update the model when a new version it's out.
+In the script I am using both versions but you can customize the model you want to use
+
+ollama.pull('llama3:70b')
+ollama.pull('llama3:8b')
+
+Then
+
+```bash
+python maestro-ollama.py
+```
+
+## Higly requested features
+- SEARCH 🔍
+
+Now, when it's creating a task for its subagent, Claude Opus will perform a search and get the best answer to help the subagent solve that task even better.
+
+Make sure you replace your Tavil API for search to work
+
+Get one here https://tavily.com/
+  
+- GPT4 SUPPORT
+
+Add support for GPT-4 as an orchestrator in maestro-gpt.py
+Simply
+```bash
+python maestro-gpt.py
+```
+
+After you complete your installs.
+
 
 ## Features
 
@@ -22,9 +72,16 @@ To run this script, you need to have the following:
 
 ## Installation
 
-1. Clone the repository 
-2. Install [Python](https://www.python.org/), For example, on macOS, you can install Python 3.12 using Homebrew:
+Option 1: Using requirements.txt
+1. Clone the repository or download the script file.
+2. Install the required Python packages by running the following command:
+```shell
+pip install -r requirements.txt
+```
 
+Option 2: Using Poetry
+1. Clone the repository
+2. Install [Python](https://www.python.org/), For example, on macOS, you can install Python 3.12 using Homebrew:
 ```shell
 $ brew install python@3.12
 ```
@@ -53,13 +110,17 @@ $ poetry install
 Creating virtualenv src in <ROOT>/.venv
 Updating dependencies
 ...
-Installing the current project: src (0.0.0)
 ```
 
-3. Replace the placeholder API key in the script with your actual Anthropic API key:
+Replace the placeholder API key in the script with your actual Anthropic API key:
 
 ```python
 client = Anthropic(api_key="YOUR_API_KEY_HERE")
+```
+
+If using search, replace your Tavil API
+```python
+tavily = TavilyClient(api_key="YOUR API KEY HERE")
 ```
 
 ## Usage

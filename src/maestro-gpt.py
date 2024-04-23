@@ -1,38 +1,29 @@
 import os
 from anthropic import Anthropic
+from openai import OpenAI
 import re
 from rich.console import Console
 from rich.panel import Panel
 from datetime import datetime
 import json
-from tavily import TavilyClient
 
 # Set up the Anthropic API client
-client = Anthropic(api_key="YOUR API")
+anthropic_client = Anthropic(api_key="YOUR ANTHROPIC API KEY")
 
-def calculate_subagent_cost(model, input_tokens, output_tokens):
-    # Pricing information per model
-    pricing = {
-        "claude-3-opus-20240229": {"input_cost_per_mtok": 15.00, "output_cost_per_mtok": 75.00},
-        "claude-3-haiku-20240307": {"input_cost_per_mtok": 0.25, "output_cost_per_mtok": 1.25},
-    }
+# Set up the OpenAI API client
+openai_client = OpenAI(api_key="YOUR OPENAI API KEY")
 
-    # Calculate cost
-    input_cost = (input_tokens / 1_000_000) * pricing[model]["input_cost_per_mtok"]
-    output_cost = (output_tokens / 1_000_000) * pricing[model]["output_cost_per_mtok"]
-    total_cost = input_cost + output_cost
-
-    return total_cost
+# Set the Claude model to use for the sub-agent
+claude_model = "claude-3-opus-20240229"
 
 # Initialize the Rich Console
 console = Console()
 
-def opus_orchestrator(objective, file_content=None, previous_results=None, use_search=False):
+def opus_orchestrator(objective, file_content=None, previous_results=None):
     console.print(f"\n[bold]Calling Orchestrator for your objective[/bold]")
     previous_results_text = "\n".join(previous_results) if previous_results else "None"
     if file_content:
         console.print(Panel(f"File content:\n{file_content}", title="[bold blue]File Content[/bold blue]", title_align="left", border_style="blue"))
-    
     messages = [
         {
             "role": "user",
@@ -41,88 +32,51 @@ def opus_orchestrator(objective, file_content=None, previous_results=None, use_s
             ]
         }
     ]
-    if use_search:
-        messages[0]["content"].append({"type": "text", "text": "Please also generate a JSON object containing a single 'search_query' key, which represents a question that, when asked online, would yield important information for solving the subtask. The question should be specific and targeted to elicit the most relevant and helpful resources. Format your JSON like this, with no additional text before or after:\n{\"search_query\": \"<question>\"}\n"})
 
-    opus_response = client.messages.create(
-        model="claude-3-opus-20240229",
-        max_tokens=4096,
-        messages=messages
-    )
+    if orchestrator_model == "Claude Opus":
+        opus_response = anthropic_client.messages.create(
+            model="claude-3-opus-20240229",
+            max_tokens=4096,
+            messages=messages
+        )
+        response_text = opus_response.content[0].text
+    else:  # GPT-4
+        gpt4_response = openai_client.chat.completions.create(
+            model="gpt-4-0125-preview",
+            messages=messages
+        )
+        response_text = gpt4_response.choices[0].message.content
 
-    response_text = opus_response.content[0].text
-    console.print(f"Input Tokens: {opus_response.usage.input_tokens}, Output Tokens: {opus_response.usage.output_tokens}")
-    total_cost = calculate_subagent_cost("claude-3-opus-20240229", opus_response.usage.input_tokens, opus_response.usage.output_tokens)
-    console.print(f"Opus Orchestrator Cost: ${total_cost:.2f}")
+    console.print(Panel(response_text, title=f"[bold green]{orchestrator_model} Orchestrator[/bold green]", title_align="left", border_style="green", subtitle="Sending task to subagent 👇"))
+    return response_text, file_content
 
-    search_query = None
-    if use_search:
-        # Extract the JSON from the response
-        json_match = re.search(r'{.*}', response_text, re.DOTALL)
-        if json_match:
-            json_string = json_match.group()
-            try:
-                search_query = json.loads(json_string)["search_query"]
-                console.print(Panel(f"Search Query: {search_query}", title="[bold blue]Search Query[/bold blue]", title_align="left", border_style="blue"))
-                response_text = response_text.replace(json_string, "").strip()
-            except json.JSONDecodeError as e:
-                console.print(Panel(f"Error parsing JSON: {e}", title="[bold red]JSON Parsing Error[/bold red]", title_align="left", border_style="red"))
-                console.print(Panel(f"Skipping search query extraction.", title="[bold yellow]Search Query Extraction Skipped[/bold yellow]", title_align="left", border_style="yellow"))
-        else:
-            search_query = None
+def subagent(prompt, previous_subagent_tasks=None):
+    if previous_subagent_tasks is None:
+        previous_subagent_tasks = []
 
-    console.print(Panel(response_text, title=f"[bold green]Opus Orchestrator[/bold green]", title_align="left", border_style="green", subtitle="Sending task to Haiku 👇"))
-    return response_text, file_content, search_query
-
-
-def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, use_search=False, continuation=False):
-    if previous_haiku_tasks is None:
-        previous_haiku_tasks = []
-
-    continuation_prompt = "Continuing from the previous answer, please complete the response."
-    system_message = "Previous Haiku tasks:\n" + "\n".join(f"Task: {task['task']}\nResult: {task['result']}" for task in previous_haiku_tasks)
-    if continuation:
-        prompt = continuation_prompt
-
-    qna_response = None
-    if search_query and use_search:
-        # Initialize the Tavily client
-        tavily = TavilyClient(api_key="YOUR API KEY")
-        # Perform a QnA search based on the search query
-        qna_response = tavily.qna_search(query=search_query)
-        console.print(f"QnA response: {qna_response}", style="yellow")
+    system_message = "Previous subagent tasks:\n" + "\n".join(previous_subagent_tasks)
 
     messages = [
         {
             "role": "user",
             "content": [
-                {"type": "text", "text": prompt},
-                {"type": "text", "text": f"\nSearch Results:\n{qna_response}" if qna_response else ""}
+                {"type": "text", "text": prompt}
             ]
         }
     ]
 
-    haiku_response = client.messages.create(
-        model="claude-3-haiku-20240307",
+    subagent_response = anthropic_client.messages.create(
+        model=claude_model,
         max_tokens=4096,
         messages=messages,
         system=system_message
     )
 
-    response_text = haiku_response.content[0].text
-    console.print(f"Input Tokens: {haiku_response.usage.input_tokens}, Output Tokens: {haiku_response.usage.output_tokens}")
-    total_cost = calculate_subagent_cost("claude-3-haiku-20240307", haiku_response.usage.input_tokens, haiku_response.usage.output_tokens)
-    console.print(f"Haiku Sub-agent Cost: ${total_cost:.2f}")
-
-    if haiku_response.usage.output_tokens >= 4000:  # Threshold set to 4000 as a precaution
-        console.print("[bold yellow]Warning:[/bold yellow] Output may be truncated. Attempting to continue the response.")
-        continuation_response_text = haiku_sub_agent(prompt, search_query, previous_haiku_tasks, use_search, continuation=True)
-        response_text += continuation_response_text
-
-    console.print(Panel(response_text, title="[bold blue]Haiku Sub-agent Result[/bold blue]", title_align="left", border_style="blue", subtitle="Task completed, sending result to Opus 👇"))
+    response_text = subagent_response.content[0].text
+    console.print(Panel(response_text, title="[bold blue]Subagent Result[/bold blue]", title_align="left", border_style="blue", subtitle="Task completed, sending result to Maestro 👇"))
     return response_text
 
-def opus_refine(objective, sub_task_results, filename, projectname, continuation=False):
+def opus_refine(objective, sub_task_results, filename, projectname):
     print("\nCalling Opus to provide the refined final output for your objective:")
     messages = [
         {
@@ -133,22 +87,13 @@ def opus_refine(objective, sub_task_results, filename, projectname, continuation
         }
     ]
 
-    opus_response = client.messages.create(
+    opus_response = anthropic_client.messages.create(
         model="claude-3-opus-20240229",
         max_tokens=4096,
         messages=messages
     )
 
-    response_text = opus_response.content[0].text.strip()
-    console.print(f"Input Tokens: {opus_response.usage.input_tokens}, Output Tokens: {opus_response.usage.output_tokens}")
-    total_cost = calculate_subagent_cost("claude-3-opus-20240229", opus_response.usage.input_tokens, opus_response.usage.output_tokens)
-    console.print(f"Opus Refine Cost: ${total_cost:.2f}")
-
-    if opus_response.usage.output_tokens >= 4000 and not continuation:  # Threshold set to 4000 as a precaution
-        console.print("[bold yellow]Warning:[/bold yellow] Output may be truncated. Attempting to continue the response.")
-        continuation_response_text = opus_refine(objective, sub_task_results + [response_text], filename, projectname, continuation=True)
-        response_text += "\n" + continuation_response_text
-
+    response_text = opus_response.content[0].text
     console.print(Panel(response_text, title="[bold green]Final Output[/bold green]", title_align="left", border_style="green"))
     return response_text
 
@@ -191,6 +136,11 @@ def read_file(file_path):
         content = file.read()
     return content
 
+# Ask the user for the orchestrator model choice
+orchestrator_model = input("Please choose the orchestrator model (Claude Opus or GPT-4): ")
+while orchestrator_model not in ["Claude Opus", "GPT-4"]:
+    orchestrator_model = input("Invalid choice. Please enter 'Claude Opus' or 'GPT-4': ")
+
 # Get the objective from user input
 objective = input("Please enter your objective with or without a text file path: ")
 
@@ -206,20 +156,17 @@ if "./" in objective or "/" in objective:
 else:
     file_content = None
 
-# Ask the user if they want to use search
-use_search = input("Do you want to use search? (y/n): ").lower() == 'y'
-
 task_exchanges = []
-haiku_tasks = []
+subagent_tasks = []
 
 while True:
     # Call Orchestrator to break down the objective into the next sub-task or provide the final output
     previous_results = [result for _, result in task_exchanges]
     if not task_exchanges:
         # Pass the file content only in the first iteration if available
-        opus_result, file_content_for_haiku, search_query = opus_orchestrator(objective, file_content, previous_results, use_search)
+        opus_result, file_content_for_subagent = opus_orchestrator(objective, file_content, previous_results)
     else:
-        opus_result, _, search_query = opus_orchestrator(objective, previous_results=previous_results, use_search=use_search)
+        opus_result, _ = opus_orchestrator(objective, previous_results=previous_results)
 
     if "The task is complete:" in opus_result:
         # If Opus indicates the task is complete, exit the loop
@@ -227,17 +174,14 @@ while True:
         break
     else:
         sub_task_prompt = opus_result
-        # Append file content to the prompt for the initial call to haiku_sub_agent, if applicable
-        if file_content_for_haiku and not haiku_tasks:
-            sub_task_prompt = f"{sub_task_prompt}\n\nFile content:\n{file_content_for_haiku}"
-        # Call haiku_sub_agent with the prepared prompt, search query, and record the result
-        sub_task_result = haiku_sub_agent(sub_task_prompt, search_query, haiku_tasks, use_search)
-        # Log the task and its result for future reference
-        haiku_tasks.append({"task": sub_task_prompt, "result": sub_task_result})
-        # Record the exchange for processing and output generation
+        # Include file content in the first subagent call if available
+        if file_content_for_subagent and not subagent_tasks:
+            sub_task_prompt += "\n\nFile content:\n" + file_content_for_subagent
+        sub_task_result = subagent(sub_task_prompt, subagent_tasks)
+        subagent_tasks.append(f"Task: {sub_task_prompt}\nResult: {sub_task_result}")
         task_exchanges.append((sub_task_prompt, sub_task_result))
-        # Prevent file content from being included in future haiku_sub_agent calls
-        file_content_for_haiku = None
+        # Ensure file content is not passed in subsequent calls
+        file_content_for_subagent = None
 
 # Create the .md filename
 sanitized_objective = re.sub(r'\W+', '_', objective)
@@ -268,7 +212,7 @@ code_blocks = re.findall(r'Filename: (\S+)\s*```[\w]*\n(.*?)\n```', refined_outp
 create_folder_structure(project_name, folder_structure, code_blocks)
 
 # Truncate the sanitized_objective to a maximum of 50 characters
-max_length = 25
+max_length = 40
 truncated_objective = sanitized_objective[:max_length] if len(sanitized_objective) > max_length else sanitized_objective
 
 # Update the filename to include the project name
