@@ -1,3 +1,4 @@
 anthropic
 rich
 tavily-python
+ollama
