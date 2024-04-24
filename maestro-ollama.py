@@ -6,6 +6,7 @@ from rich.console import Console
 from rich.panel import Panel
 import ollama
 from ollama import Client  # Import the Ollama client
+import argparse
 
 # Only for the first time run based on the model you want to use
 # ollama.pull('llama3:70b')
@@ -14,12 +15,19 @@ from ollama import Client  # Import the Ollama client
 # ollama.pull('llama3:70b-instruct')
 # ollama.pull('llama3:instruct')
 
-
 # Define model identifiers as variables at the top of the script
 ORCHESTRATOR_MODEL = 'llama3:70b-instruct'
 SUBAGENT_MODEL = 'llama3:instruct'
 REFINER_MODEL = 'llama3:70b-instruct'
 
+# check and pull models if they don't exist yet
+for model in [ORCHESTRATOR_MODEL, SUBAGENT_MODEL, REFINER_MODEL]:
+    try:
+        print(f"Checking for model: {model}")
+        m = ollama.show(model)
+    except ollama._types.ResponseError as e:
+        print(f"Pulling model from ollama: {model}")
+        ollama.pull(model)
 
 # Initialize the Ollama client
 client = Client(host='http://localhost:11434')
@@ -138,8 +146,17 @@ def read_file(file_path):
         content = file.read()
     return content
 
-# Get the objective from user input
-objective = input("Please enter your objective with or without a text file path: ")
+
+# parse args
+parser = argparse.ArgumentParser()
+parser.add_argument('-p', '--prompt', type=str, help='Please enter your objective with or without a text file path')
+args = parser.parse_args()
+
+if args.prompt is not None:
+    objective = args.prompt
+else:
+    # Get the objective from user input
+    objective = input("Please enter your objective with or without a text file path: ")
 
 # Check if the input contains a file path
 if "./" in objective or "/" in objective:
