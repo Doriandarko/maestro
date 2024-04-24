@@ -4,6 +4,7 @@
 This Python script demonstrates an AI-assisted task breakdown and execution workflow using the Anthropic API. It utilizes two AI models, Opus and Haiku, to break down an objective into sub-tasks, execute each sub-task, and refine the results into a cohesive final output.
 
 ## New
+
 Mestro now runs locally thanks to the Ollama platform. Experience the power of Llama 3 locally! 
 
 Before running the script
@@ -34,6 +35,18 @@ python maestro-ollama.py
 ```
 
 ## Higly requested features
+- GROQ SUPPORT
+Experience the power of maestro thanks to Groq super fast api responses.
+```bash
+pip install groq
+```
+Then
+
+```bash
+python maestro-groq.py
+```
+
+
 - SEARCH 🔍
 
 Now, when it's creating a task for its subagent, Claude Opus will perform a search and get the best answer to help the subagent solve that task even better.
