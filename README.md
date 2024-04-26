@@ -153,5 +153,5 @@ This script is released under the [MIT License](LICENSE).
 
 ## Acknowledgements
 
-- Anthropic for providing the AI models and API.
-- Rich for the beautiful console formatting.
+- [Anthropic](https://github.com/anthropics) for providing the AI models and API.
+- [Rich](https://github.com/Textualize/rich) for the beautiful console formatting.
