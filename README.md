@@ -34,7 +34,7 @@ Then
 python maestro-ollama.py
 ```
 
-## Higly requested features
+## Highly requested features
 - GROQ SUPPORT
 Experience the power of maestro thanks to Groq super fast api responses.
 ```bash
