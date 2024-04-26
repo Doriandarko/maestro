@@ -149,7 +149,7 @@ You can customize the script according to your needs:
 
 ## License
 
-This script is released under the MIT License.
+This script is released under the [MIT License](LICENSE).
 
 ## Acknowledgements
 
