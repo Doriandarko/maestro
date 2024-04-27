@@ -8,13 +8,23 @@ import json
 from tavily import TavilyClient
 
 # Set up the Anthropic API client
-client = Anthropic(api_key="YOUR API")
+client = Anthropic(api_key="YOUR API KEY")
+
+# Available Claude models:
+# Claude 3 Opus	    claude-3-opus-20240229
+# Claude 3 Sonnet	claude-3-sonnet-20240229
+# Claude 3 Haiku	claude-3-haiku-20240307
+
+ORCHESTRATOR_MODEL = "claude-3-opus-20240229"
+SUB_AGENT_MODEL = "claude-3-sonnet-20240229"
+REFINER_MODEL = "claude-3-opus-20240229"
 
 def calculate_subagent_cost(model, input_tokens, output_tokens):
     # Pricing information per model
     pricing = {
         "claude-3-opus-20240229": {"input_cost_per_mtok": 15.00, "output_cost_per_mtok": 75.00},
         "claude-3-haiku-20240307": {"input_cost_per_mtok": 0.25, "output_cost_per_mtok": 1.25},
+        "claude-3-sonnet-20240229": {"input_cost_per_mtok": 3.00, "output_cost_per_mtok": 15.00},
     }
 
     # Calculate cost
@@ -45,15 +55,15 @@ def opus_orchestrator(objective, file_content=None, previous_results=None, use_s
         messages[0]["content"].append({"type": "text", "text": "Please also generate a JSON object containing a single 'search_query' key, which represents a question that, when asked online, would yield important information for solving the subtask. The question should be specific and targeted to elicit the most relevant and helpful resources. Format your JSON like this, with no additional text before or after:\n{\"search_query\": \"<question>\"}\n"})
 
     opus_response = client.messages.create(
-        model="claude-3-opus-20240229",
+        model=ORCHESTRATOR_MODEL,
         max_tokens=4096,
         messages=messages
     )
 
     response_text = opus_response.content[0].text
     console.print(f"Input Tokens: {opus_response.usage.input_tokens}, Output Tokens: {opus_response.usage.output_tokens}")
-    total_cost = calculate_subagent_cost("claude-3-opus-20240229", opus_response.usage.input_tokens, opus_response.usage.output_tokens)
-    console.print(f"Opus Orchestrator Cost: ${total_cost:.2f}")
+    total_cost = calculate_subagent_cost(ORCHESTRATOR_MODEL, opus_response.usage.input_tokens, opus_response.usage.output_tokens)
+    console.print(f"Orchestrator Cost: ${total_cost:.4f}")
 
     search_query = None
     if use_search:
@@ -87,23 +97,25 @@ def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, use_se
     qna_response = None
     if search_query and use_search:
         # Initialize the Tavily client
-        tavily = TavilyClient(api_key="YOUR API KEY")
+        tavily = TavilyClient(api_key="YOUR API KEY HERE")
         # Perform a QnA search based on the search query
         qna_response = tavily.qna_search(query=search_query)
         console.print(f"QnA response: {qna_response}", style="yellow")
 
+    # Prepare the messages array with only the prompt initially
     messages = [
         {
             "role": "user",
-            "content": [
-                {"type": "text", "text": prompt},
-                {"type": "text", "text": f"\nSearch Results:\n{qna_response}" if qna_response else ""}
-            ]
+            "content": [{"type": "text", "text": prompt}]
         }
     ]
 
+    # Add search results to the messages if there are any
+    if qna_response:
+        messages[0]["content"].append({"type": "text", "text": f"\nSearch Results:\n{qna_response}"})
+
     haiku_response = client.messages.create(
-        model="claude-3-haiku-20240307",
+        model=SUB_AGENT_MODEL,
         max_tokens=4096,
         messages=messages,
         system=system_message
@@ -111,8 +123,8 @@ def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, use_se
 
     response_text = haiku_response.content[0].text
     console.print(f"Input Tokens: {haiku_response.usage.input_tokens}, Output Tokens: {haiku_response.usage.output_tokens}")
-    total_cost = calculate_subagent_cost("claude-3-haiku-20240307", haiku_response.usage.input_tokens, haiku_response.usage.output_tokens)
-    console.print(f"Haiku Sub-agent Cost: ${total_cost:.2f}")
+    total_cost = calculate_subagent_cost(SUB_AGENT_MODEL, haiku_response.usage.input_tokens, haiku_response.usage.output_tokens)
+    console.print(f"Sub-agent Cost: ${total_cost:.4f}")
 
     if haiku_response.usage.output_tokens >= 4000:  # Threshold set to 4000 as a precaution
         console.print("[bold yellow]Warning:[/bold yellow] Output may be truncated. Attempting to continue the response.")
@@ -134,15 +146,15 @@ def opus_refine(objective, sub_task_results, filename, projectname, continuation
     ]
 
     opus_response = client.messages.create(
-        model="claude-3-opus-20240229",
+        model=REFINER_MODEL,
         max_tokens=4096,
         messages=messages
     )
 
     response_text = opus_response.content[0].text.strip()
     console.print(f"Input Tokens: {opus_response.usage.input_tokens}, Output Tokens: {opus_response.usage.output_tokens}")
-    total_cost = calculate_subagent_cost("claude-3-opus-20240229", opus_response.usage.input_tokens, opus_response.usage.output_tokens)
-    console.print(f"Opus Refine Cost: ${total_cost:.2f}")
+    total_cost = calculate_subagent_cost(REFINER_MODEL, opus_response.usage.input_tokens, opus_response.usage.output_tokens)
+    console.print(f"Refine Cost: ${total_cost:.4f}")
 
     if opus_response.usage.output_tokens >= 4000 and not continuation:  # Threshold set to 4000 as a precaution
         console.print("[bold yellow]Warning:[/bold yellow] Output may be truncated. Attempting to continue the response.")
