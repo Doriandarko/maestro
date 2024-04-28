@@ -63,7 +63,7 @@ def haiku_sub_agent(prompt, previous_haiku_tasks=None, continuation=False):
         prompt = continuation_prompt
 
     # Compile previous tasks into a readable format
-    previous_tasks_summary = "Previous Haiku tasks:\n" + "\n".join(f"Task: {task['task']}\nResult: {task['result']}" for task in previous_haiku_tasks)
+    previous_tasks_summary = "Previous Sub-agent tasks:\n" + "\n".join(f"Task: {task['task']}\nResult: {task['result']}" for task in previous_haiku_tasks)
     
     # Append previous tasks summary to the prompt
     full_prompt = f"{previous_tasks_summary}\n\n{prompt}"
@@ -145,7 +145,23 @@ def read_file(file_path):
     with open(file_path, 'r') as file:
         content = file.read()
     return content
+   
+def has_task_data():
+    return os.path.exists('task_data.json')
 
+def read_task_data():
+    with open('task_data.json', 'r') as file:
+        task_data = json.load(file)
+    return task_data
+
+
+def write_task_data(task_data):
+    with open('task_data.json', 'w') as file:
+        json.dump(task_data, file)
+
+
+continue_from_last_task = False
+tmp_task_data = {}
 
 # parse args
 parser = argparse.ArgumentParser()
@@ -155,8 +171,20 @@ args = parser.parse_args()
 if args.prompt is not None:
     objective = args.prompt
 else:
-    # Get the objective from user input
-    objective = input("Please enter your objective with or without a text file path: ")
+    # Check if there is a task data file
+    if has_task_data():
+        continue_from_last_task = input("Do you want to continue from the last task? (y/n): ").lower() == 'y'
+
+    if continue_from_last_task:
+        tmp_task_data = read_task_data()
+        objective = tmp_task_data['objective']
+        task_exchanges = tmp_task_data['task_exchanges']
+        console.print(Panel(f"Resuming from last task: {objective}", title="[bold blue]Resuming from last task[/bold blue]", title_align="left", border_style="blue"))
+    else:
+        # Get the objective from user input
+        objective = input("Please enter your objective with or without a text file path: ")
+        tmp_task_data['objective'] = objective
+        tmp_task_data['task_exchanges'] = []
 
 # Check if the input contains a file path
 if "./" in objective or "/" in objective:
@@ -197,6 +225,10 @@ while True:
         haiku_tasks.append({"task": sub_task_prompt, "result": sub_task_result})
         # Record the exchange for processing and output generation
         task_exchanges.append((sub_task_prompt, sub_task_result))
+        # Update the task data with the new task exchanges
+        tmp_task_data['task_exchanges'] = task_exchanges
+        # Save the task data to a JSON file for resuming later
+        write_task_data(tmp_task_data)
         # Prevent file content from being included in future haiku_sub_agent calls
         file_content_for_haiku = None
 
