@@ -3,8 +3,22 @@
 
 This Python script demonstrates an AI-assisted task breakdown and execution workflow using the Anthropic API. It utilizes two AI models, Opus and Haiku, to break down an objective into sub-tasks, execute each sub-task, and refine the results into a cohesive final output.
 
-## New
+## New Run locally with LMStudio or Ollama
 
+### Lmstudio
+
+First download the app here
+https://lmstudio.ai/
+
+Then run the local server using your preferred model. I also raccomand removving any system prompt for the app (l;eave your prompt field emptyy so it can take advatage of the script pormpts)
+
+Then
+```bash
+python maestro-lmstudio.py
+```
+
+
+### Ollama
 Mestro now runs locally thanks to the Ollama platform. Experience the power of Llama 3 locally! 
 
 Before running the script
