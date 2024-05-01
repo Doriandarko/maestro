@@ -10,7 +10,7 @@ This Python script demonstrates an AI-assisted task breakdown and execution work
 First download the app here
 https://lmstudio.ai/
 
-Then run the local server using your preferred model. I also raccomand removving any system prompt for the app (l;eave your prompt field emptyy so it can take advatage of the script pormpts)
+Then run the local server using your preferred method. I also recommend removing any system prompt for the app (leave your prompt field empty so it can take advantage of the script prompts).
 
 Then
 ```bash
