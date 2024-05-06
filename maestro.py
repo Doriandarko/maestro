@@ -6,6 +6,8 @@ from rich.panel import Panel
 from datetime import datetime
 import json
 from tavily import TavilyClient
+import time
+from collections import deque
 
 # Set up the Anthropic API client
 client = Anthropic(api_key="YOUR API KEY")
@@ -85,6 +87,12 @@ def opus_orchestrator(objective, file_content=None, previous_results=None, use_s
     return response_text, file_content, search_query
 
 
+# Initialize the Tavily request rate limiting parameters (see https://docs.tavily.com/docs/tavily-api/rest_api#rate-limiting).
+TAVILY_REQUEST_LIMIT = 20
+TAVILY_REQUEST_WINDOW = 60  # In seconds.
+tavily_request_timestamps = deque()
+
+
 def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, use_search=False, continuation=False):
     if previous_haiku_tasks is None:
         previous_haiku_tasks = []
@@ -96,11 +104,23 @@ def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, use_se
 
     qna_response = None
     if search_query and use_search:
+        # Rate limiting for Tavily requests.
+        current_time = time.time()
+        while tavily_request_timestamps and tavily_request_timestamps[0] < current_time - TAVILY_REQUEST_WINDOW:
+            tavily_request_timestamps.popleft()
+
+        if len(tavily_request_timestamps) >= TAVILY_REQUEST_LIMIT:
+            sleep_time = tavily_request_timestamps[0] + TAVILY_REQUEST_WINDOW - current_time
+            console.print(f"[bold yellow]Tavily rate limit exceeded. Waiting for {sleep_time:.2f} seconds.[/bold yellow]")
+            time.sleep(sleep_time)
+
         # Initialize the Tavily client
         tavily = TavilyClient(api_key="YOUR API KEY HERE")
         # Perform a QnA search based on the search query
         qna_response = tavily.qna_search(query=search_query)
         console.print(f"QnA response: {qna_response}", style="yellow")
+
+        tavily_request_timestamps.append(time.time())
 
     # Prepare the messages array with only the prompt initially
     messages = [
