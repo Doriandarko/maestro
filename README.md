@@ -7,7 +7,13 @@ This Python script demonstrates an AI-assisted task breakdown and execution work
 
 GPT-4po
 
-The gpt script has been updated from the ground app to support the code capabilities of GPT-4o
+The GPT script has been updated from the ground app to support the code capabilities of GPT-4o
+
+Afeter installing dependecies run
+
+```bash
+python maestro-gpt4o.py
+```
 
 ## Run locally with LMStudio or Ollama
 
