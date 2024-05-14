@@ -3,7 +3,13 @@
 
 This Python script demonstrates an AI-assisted task breakdown and execution workflow using the Anthropic API. It utilizes two AI models, Opus and Haiku, to break down an objective into sub-tasks, execute each sub-task, and refine the results into a cohesive final output.
 
-## New: Run locally with LMStudio or Ollama
+## New: 
+
+GPT-4po
+
+The gpt script has been updated from the ground app to support the code capabilities of GPT-4o
+
+## Run locally with LMStudio or Ollama
 
 ### Lmstudio
 
