@@ -5,7 +5,7 @@ This Python script demonstrates an AI-assisted task breakdown and execution work
 
 ## New: 
 
-GPT-4po
+# GPT-4o
 
 The GPT script has been updated from the ground up to support the code capabilities of GPT-4o
 
