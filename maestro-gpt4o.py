@@ -190,13 +190,18 @@ def read_file(file_path):
     return content
 
 # Get the objective from user input
-objective = input("Please enter your objective with or without a text file path: ")
+objective = input("Please enter your objective: ")
 
-# Check if the input contains a file path
-if "./" in objective or "/" in objective:
-    file_path = re.findall(r'[./\w]+\.[\w]+', objective)[0]
-    file_content = read_file(file_path)
-    objective = objective.split(file_path)[0].strip()
+# Ask the user if they want to provide a file path
+provide_file = input("Do you want to provide a file path? (y/n): ").lower() == 'y'
+
+if provide_file:
+    file_path = input("Please enter the file path: ")
+    if os.path.exists(file_path):
+        file_content = read_file(file_path)
+    else:
+        print(f"File not found: {file_path}")
+        file_content = None
 else:
     file_content = None
 
@@ -212,6 +217,8 @@ while True:
         gpt_result, file_content_for_gpt, search_query = gpt_orchestrator(objective, file_content, previous_results, use_search)
     else:
         gpt_result, _, search_query = gpt_orchestrator(objective, previous_results=previous_results, use_search=use_search)
+
+    
 
     if "The task is complete:" in gpt_result:
         final_output = gpt_result.replace("The task is complete:", "").strip()
