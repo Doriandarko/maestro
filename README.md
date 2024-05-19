@@ -9,7 +9,7 @@ This Python script demonstrates an AI-assisted task breakdown and execution work
 
 The GPT script has been updated from the ground up to support the code capabilities of GPT-4o
 
-Afeter installing dependecies run
+After installing dependencies run
 
 ```bash
 python maestro-gpt4o.py
