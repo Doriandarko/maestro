@@ -8,9 +8,11 @@ from openai import OpenAI
 from anthropic import Anthropic
 from tavily import TavilyClient
 
+import config
+
 # Initialize OpenAI and Anthropic API clients
-openai_client = OpenAI(api_key="YOUR API KEY")
-anthropic_client = Anthropic(api_key="YOUR API KEY")
+openai_client = OpenAI(api_key=config.openai_api_key)
+anthropic_client = Anthropic(api_key=config.anthropic_api_key)
 
 # Available OpenAI models
 ORCHESTRATOR_MODEL = "gpt-4o"
@@ -154,7 +156,7 @@ def anthropic_refine(objective, sub_task_results, filename, projectname, continu
 
 def create_folder_structure(project_name, folder_structure, code_blocks):
     try:
-        os.makedirs(project_name, exist_ok=True)
+        os.makedirs(os.path.join(config.objectives_dir, project_name), exist_ok=True)
         console.print(Panel(f"Created project folder: [bold]{project_name}[/bold]", title="[bold green]Project Folder[/bold green]", title_align="left", border_style="green"))
     except OSError as e:
         console.print(Panel(f"Error creating project folder: [bold]{project_name}[/bold]\nError: {e}", title="[bold red]Project Folder Creation Error[/bold red]", title_align="left", border_style="red"))
@@ -164,7 +166,7 @@ def create_folder_structure(project_name, folder_structure, code_blocks):
 
 def create_folders_and_files(current_path, structure, code_blocks):
     for key, value in structure.items():
-        path = os.path.join(current_path, key)
+        path = os.path.join(config.objectives_dir, current_path, key)
         if isinstance(value, dict):
             try:
                 os.makedirs(path, exist_ok=True)
@@ -256,7 +258,7 @@ create_folder_structure(project_name, folder_structure, code_blocks)
 max_length = 25
 truncated_objective = sanitized_objective[:max_length] if len(sanitized_objective) > max_length else sanitized_objective
 
-filename = f"{timestamp}_{truncated_objective}.md"
+filename = os.path.join(config.objectives_dir, f"{timestamp}_{truncated_objective}.md")
 
 exchange_log = f"Objective: {objective}\n\n"
 exchange_log += "=" * 40 + " Task Breakdown " + "=" * 40 + "\n\n"

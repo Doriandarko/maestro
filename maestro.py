@@ -7,8 +7,10 @@ from datetime import datetime
 import json
 from tavily import TavilyClient
 
+import config
+
 # Set up the Anthropic API client
-client = Anthropic(api_key="YOUR API KEY")
+client = Anthropic(api_key=config.anthropic_api_key)
 
 # Available Claude models:
 # Claude 3 Opus	    claude-3-opus-20240229
@@ -167,7 +169,7 @@ def opus_refine(objective, sub_task_results, filename, projectname, continuation
 def create_folder_structure(project_name, folder_structure, code_blocks):
     # Create the project folder
     try:
-        os.makedirs(project_name, exist_ok=True)
+        os.makedirs(os.path.join(config.objectives_dir, project_name), exist_ok=True)
         console.print(Panel(f"Created project folder: [bold]{project_name}[/bold]", title="[bold green]Project Folder[/bold green]", title_align="left", border_style="green"))
     except OSError as e:
         console.print(Panel(f"Error creating project folder: [bold]{project_name}[/bold]\nError: {e}", title="[bold red]Project Folder Creation Error[/bold red]", title_align="left", border_style="red"))
@@ -178,7 +180,7 @@ def create_folder_structure(project_name, folder_structure, code_blocks):
 
 def create_folders_and_files(current_path, structure, code_blocks):
     for key, value in structure.items():
-        path = os.path.join(current_path, key)
+        path = os.path.join(config.objectives_dir, current_path, key)
         if isinstance(value, dict):
             try:
                 os.makedirs(path, exist_ok=True)
@@ -284,7 +286,7 @@ max_length = 25
 truncated_objective = sanitized_objective[:max_length] if len(sanitized_objective) > max_length else sanitized_objective
 
 # Update the filename to include the project name
-filename = f"{timestamp}_{truncated_objective}.md"
+filename = os.path.join(config.objectives_dir, f"{timestamp}_{truncated_objective}.md")
 
 # Prepare the full exchange log
 exchange_log = f"Objective: {objective}\n\n"
