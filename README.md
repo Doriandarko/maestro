@@ -17,7 +17,9 @@ os.environ["GEMINI_API_KEY"] = "YOUR KEY"
 
 #### Define the models to be used for each stage
 ORCHESTRATOR_MODEL = "gemini/gemini-1.5-flash-latest"
+
 SUB_AGENT_MODEL = "gemini/gemini-1.5-flash-latest"
+
 REFINER_MODEL = "gemini/gemini-1.5-flash-latest"
 
 Or gpt-3.5-turbo, etc.
