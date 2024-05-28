@@ -4,6 +4,32 @@
 This Python script demonstrates an AI-assisted task breakdown and execution workflow using the Anthropic API. It utilizes two AI models, Opus and Haiku, to break down an objective into sub-tasks, execute each sub-task, and refine the results into a cohesive final output.
 
 ## New: 
+# Use Maestro with any APIs, Anthropic, Gemini, OpenAI, Cohere, etc.
+Thanks to a rewrite of the codebase using LiteLLM, it's now much easier to select the model you want.
+
+Simply
+# Set environment variables for API keys for the services you are using
+os.environ["OPENAI_API_KEY"] = "YOUR KEY"
+os.environ["ANTHROPIC_API_KEY"] = "YOUR KEY"
+os.environ["GEMINI_API_KEY"] = "YOUR KEY"
+
+# Define the models to be used for each stage
+ORCHESTRATOR_MODEL = "gemini/gemini-1.5-flash-latest"
+SUB_AGENT_MODEL = "gemini/gemini-1.5-flash-latest"
+REFINER_MODEL = "gemini/gemini-1.5-flash-latest"
+
+Or gpt-3.5-turbo, etc.
+
+First install litellm
+```bash
+pip install litellm
+
+Afeter installing dependecies run
+
+```bash
+python maestro-anyapi.py
+```
+```
 
 # GPT-4o
 
