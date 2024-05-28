@@ -8,14 +8,14 @@ This Python script demonstrates an AI-assisted task breakdown and execution work
 Thanks to a rewrite of the codebase using LiteLLM, it's now much easier to select the model you want.
 
 Simply
-### Set environment variables for API keys for the services you are using
+#### Set environment variables for API keys for the services you are using
 os.environ["OPENAI_API_KEY"] = "YOUR KEY" 
 
 os.environ["ANTHROPIC_API_KEY"] = "YOUR KEY"
 
 os.environ["GEMINI_API_KEY"] = "YOUR KEY"
 
-### Define the models to be used for each stage
+#### Define the models to be used for each stage
 ORCHESTRATOR_MODEL = "gemini/gemini-1.5-flash-latest"
 SUB_AGENT_MODEL = "gemini/gemini-1.5-flash-latest"
 REFINER_MODEL = "gemini/gemini-1.5-flash-latest"
