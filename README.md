@@ -9,8 +9,10 @@ Thanks to a rewrite of the codebase using LiteLLM, it's now much easier to selec
 
 Simply
 # Set environment variables for API keys for the services you are using
-os.environ["OPENAI_API_KEY"] = "YOUR KEY"
+os.environ["OPENAI_API_KEY"] = "YOUR KEY" 
+
 os.environ["ANTHROPIC_API_KEY"] = "YOUR KEY"
+
 os.environ["GEMINI_API_KEY"] = "YOUR KEY"
 
 # Define the models to be used for each stage
