@@ -236,3 +236,13 @@ The Flask app includes the following UI features:
 - Basic styling for improved readability and user experience.
 
 This integration aims to make the Maestro framework more accessible and user-friendly, providing an intuitive way for users to leverage the power of AI-assisted task breakdown and execution.
+
+### Updated Instructions for Running the Flask App
+
+To run the Flask app with the updated file structure, follow these steps:
+
+1. Navigate to the `flask_app` directory.
+2. Execute `python app.py` to start the Flask server.
+3. Access the web interface by navigating to `http://localhost:5000/` in your web browser.
+
+This update ensures that all Flask app-related files are neatly organized within the `flask_app` folder, simplifying the project structure and making it easier to manage.
