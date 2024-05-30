@@ -4,3 +4,4 @@ tavily-python
 ollama
 groq
 openai
+Flask

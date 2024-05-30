@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maestro Task Orchestrator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Maestro Task Orchestrator</h1>
+        </header>
+        <main>
+            <form action="/" method="post">
+                <label for="objective">Enter your objective:</label>
+                <textarea id="objective" name="objective" rows="4" required></textarea>
+                <button type="submit">Submit</button>
+            </form>
+            {% if results %}
+                <section id="results">
+                    <h2>Results</h2>
+                    <p>{{ results }}</p>
+                </section>
+            {% endif %}
+        </main>
+    </div>
+</body>
+</html>
