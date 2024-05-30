@@ -1,5 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for
+import sys
 import os
+
+# Add the current directory to the Python path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from flask import Flask, render_template, request, redirect, url_for
 import maestro_anyapi
 
 app = Flask(__name__)
