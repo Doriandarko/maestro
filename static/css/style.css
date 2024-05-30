@@ -1,0 +1,64 @@
+/* Basic styling for the Flask app UI */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+.container {
+    width: 80%;
+    margin: auto;
+    overflow: hidden;
+}
+
+header {
+    background: #50a3a2;
+    color: #ffffff;
+    padding-top: 30px;
+    min-height: 70px;
+    border-bottom: #076585 3px solid;
+}
+
+header h1 {
+    text-align: center;
+    margin: 0;
+    padding-bottom: 10px;
+}
+
+nav {
+    background: #444;
+    color: #ffffff;
+    text-align: center;
+    padding: 5px;
+}
+
+nav ul {
+    margin: 0;
+    padding: 0;
+}
+
+nav ul li {
+    display: inline;
+    margin-right: 10px;
+}
+
+nav ul li a {
+    color: white;
+    text-decoration: none;
+}
+
+main {
+    padding: 20px;
+}
+
+footer {
+    background: #444;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+}
