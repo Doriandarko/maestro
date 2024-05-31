@@ -147,7 +147,7 @@ To run this script, you need to have the following:
 2. Install the required Python packages by running the following command:
 
 ```bash
-pip install -r requirements.txt
+pip install -r flask_app/requirements.txt
 ```
 
 3. Replace the placeholder API key in the script with your actual Anthropic API key:
