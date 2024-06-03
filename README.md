@@ -33,9 +33,9 @@ Afeter installing dependecies run
 ```bash
 python maestro-anyapi.py
 ```
-```
 
-# GPT-4o
+
+## GPT-4o
 
 The GPT script has been updated from the ground up to support the code capabilities of GPT-4o
 
