@@ -27,6 +27,7 @@ Or gpt-3.5-turbo, etc.
 First install litellm
 ```bash
 pip install litellm
+```
 
 Afeter installing dependecies run
 
