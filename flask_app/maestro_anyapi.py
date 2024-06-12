@@ -7,17 +7,25 @@ import json
 from litellm import completion
 from tavily import TavilyClient
 
-# Set environment variables for API keys for the services you are using
-os.environ["OPENAI_API_KEY"] = "YOUR OPENAI API KEY"
-os.environ["ANTHROPIC_API_KEY"] = "YOUR ANTHROPIC API KEY"
-os.environ["GEMINI_API_KEY"] = "YOUR GEMINI API KEY"
-
-# Define the models to be used for each stage
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+TAVILY_API_KEY = os.environ.get("TAVILY_API_KEY")
+# TAVILY_API_KEY = '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'
 ORCHESTRATOR_MODEL = "gemini/gemini-1.5-flash-latest"
 SUB_AGENT_MODEL = "gemini/gemini-1.5-flash-latest"
 REFINER_MODEL = "gemini/gemini-1.5-flash-latest"
+# ORCHESTRATOR_MODEL = "gpt-4o"
+# SUB_AGENT_MODEL = "gpt-4o"
+# REFINER_MODEL = "claude-3-opus-20240229"
+# ORCHESTRATOR_MODEL = "mixtral-8x7b-32768"
+# SUB_AGENT_MODEL = "mixtral-8x7b-32768"
+# REFINER_MODEL = "llama3-70b-8192"
+# ORCHESTRATOR_MODEL = "claude-3-opus-20240229"
+# SUB_AGENT_MODEL = "claude-3-sonnet-20240229"
+# REFINER_MODEL = "claude-3-opus-20240229"
 
-# Initialize the Rich Console
 console = Console()
 
 def gpt_orchestrator(objective, file_content=None, previous_results=None, use_search=False):
@@ -25,7 +33,7 @@ def gpt_orchestrator(objective, file_content=None, previous_results=None, use_se
     previous_results_text = "\n".join(previous_results) if previous_results else "None"
     if file_content:
         console.print(Panel(f"File content:\n{file_content}", title="[bold blue]File Content[/bold blue]", title_align="left", border_style="blue"))
-    
+
     messages = [
         {"role": "system", "content": "You are a detailed and meticulous assistant. Your primary goal is to break down complex objectives into manageable sub-tasks, provide thorough reasoning, and ensure code correctness. Always explain your thought process step-by-step and validate any code for errors, improvements, and adherence to best practices."},
         {"role": "user", "content": f"Based on the following objective{' and file content' if file_content else ''}, and the previous sub-task results (if any), please break down the objective into the next sub-task, and create a concise and detailed prompt for a subagent so it can execute that task. IMPORTANT!!! when dealing with code tasks make sure you check the code for errors and provide fixes and support as part of the next sub-task. If you find any bugs or have suggestions for better code, please include them in the next sub-task prompt. Please assess if the objective has been fully achieved. If the previous sub-task results comprehensively address all aspects of the objective, include the phrase 'The task is complete:' at the beginning of your response. If the objective is not yet fully achieved, break it down into the next sub-task and create a concise and detailed prompt for a subagent to execute that task.:\n\nObjective: {objective}" + ('\nFile content:\n' + file_content if file_content else '') + f"\n\nPrevious sub-task results:\n{previous_results_text}"}
@@ -72,7 +80,8 @@ def gpt_sub_agent(prompt, search_query=None, previous_gpt_tasks=None, use_search
 
     qna_response = None
     if search_query and use_search:
-        tavily = TavilyClient(api_key="your-tavily-key")
+
+        tavily = TavilyClient(api_key=TAVILY_API_KEY)
         qna_response = tavily.qna_search(query=search_query)
         console.print(f"QnA response: {qna_response}", style="yellow")
 
@@ -86,7 +95,7 @@ def gpt_sub_agent(prompt, search_query=None, previous_gpt_tasks=None, use_search
 
     response = completion(model=SUB_AGENT_MODEL, messages=messages)
 
-    response_text = response['choices'][0]['message']['content']
+    response_text = response['choices'][0]['message']['content']  # pylance: disable
 
     console.print(Panel(response_text, title="[bold blue]Sub-agent Result[/bold blue]", title_align="left", border_style="blue", subtitle="Task completed, sending result to Orchestrator 👇"))
 
@@ -158,9 +167,9 @@ def read_file(file_path):
     return content
 
 # Get the objective from user input
-objective = input("Please enter your objective: ")
-
-# Ask the user if they want to provide a file path
+# objective = input("Please enter your objective: ")
+# objective = "Given a list of IP-Transaction pairs, you need to process each pair by executing a query using the client and workspace_id, start and end time, and domain. The query should be executed using the transid and clientip from the pair. If the response is successful, save the response to a file named as FWIP_FWID_startdate_enddate.json. If the response is not successful, log the error. The start and end time should be split at the 'T' character and the filename should be in the format FWIP_FWID_startdate_enddate.json. If an error occurs, log the error message. The input file contains a list of IP-Transaction pairs. You need to read the input file and process each pair. If the output directory does not exist, create it. The output directory should be named as OUTPUTDIR. The input file is in JSON format and contains a list of dictionaries with keys FWID and FWIP. The output file should be saved in the OUTPUTDIR directory. The start and end time should be split at the 'T' character."
+objective = 'To create a markdown autoformatter that reads a markdown file and formats it according to the markdown style guide. The autoformatter should be able to handle various markdown elements such as headings, lists, links, images, and code blocks. The autoformatter should ensure that the markdown file is well-formatted and adheres to the markdown style guide. The autoformatter should be able to handle both simple and complex markdown files and provide consistent formatting throughout the file. The autoformatter should be able to handle edge cases and exceptions gracefully, providing informative error messages when necessary.'
 provide_file = input("Do you want to provide a file path? (y/n): ").lower() == 'y'
 
 if provide_file:
@@ -197,7 +206,6 @@ while True:
         gpt_tasks.append({"task": sub_task_prompt, "result": sub_task_result})
         task_exchanges.append((sub_task_prompt, sub_task_result))
         file_content_for_gpt = None
-
 # Include both orchestrator prompts and sub-agent results in sub-task results
 sub_task_results = [f"Orchestrator Prompt: {prompt}\nSub-agent Result: {result}" for prompt, result in task_exchanges]
 

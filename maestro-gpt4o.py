@@ -12,12 +12,12 @@ from tavily import TavilyClient
 openai_client = OpenAI(api_key="YOUR API KEY")
 anthropic_client = Anthropic(api_key="YOUR API KEY")
 
-# Available OpenAI models
 ORCHESTRATOR_MODEL = "gpt-4o"
 SUB_AGENT_MODEL = "gpt-4o"
-
-# Available Claude models for Anthropic API
 REFINER_MODEL = "claude-3-opus-20240229"
+# Define the models to use for each agent
+?
+
 
 # Initialize the Rich Console
 console = Console()
@@ -42,7 +42,7 @@ def gpt_orchestrator(objective, file_content=None, previous_results=None, use_se
     previous_results_text = "\n".join(previous_results) if previous_results else "None"
     if file_content:
         console.print(Panel(f"File content:\n{file_content}", title="[bold blue]File Content[/bold blue]", title_align="left", border_style="blue"))
-    
+
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": f"Based on the following objective{' and file content' if file_content else ''}, and the previous sub-task results (if any), please break down the objective into the next sub-task, and create a concise and detailed prompt for a subagent so it can execute that task. IMPORTANT!!! when dealing with code tasks make sure you check the code for errors and provide fixes and support as part of the next sub-task. If you find any bugs or have suggestions for better code, please include them in the next sub-task prompt. Please assess if the objective has been fully achieved. If the previous sub-task results comprehensively address all aspects of the objective, include the phrase 'The task is complete:' at the beginning of your response. If the objective is not yet fully achieved, break it down into the next sub-task and create a concise and detailed prompt for a subagent to execute that task.:\n\nObjective: {objective}" + ('\nFile content:\n' + file_content if file_content else '') + f"\n\nPrevious sub-task results:\n{previous_results_text}"}
@@ -218,7 +218,7 @@ while True:
     else:
         gpt_result, _, search_query = gpt_orchestrator(objective, previous_results=previous_results, use_search=use_search)
 
-    
+
 
     if "The task is complete:" in gpt_result:
         final_output = gpt_result.replace("The task is complete:", "").strip()
