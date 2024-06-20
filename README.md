@@ -4,6 +4,12 @@
 This Python script demonstrates an AI-assisted task breakdown and execution workflow using the Anthropic API. It utilizes two AI models, Opus and Haiku, to break down an objective into sub-tasks, execute each sub-task, and refine the results into a cohesive final output.
 
 ## New: 
+# Updated the original Maestro to support Claude 3.5 Sonnet
+```bash
+python maestro.py
+```
+
+
 # Use Maestro with any APIs, Anthropic, Gemini, OpenAI, Cohere, etc.
 Thanks to a rewrite of the codebase using LiteLLM, it's now much easier to select the model you want.
 
