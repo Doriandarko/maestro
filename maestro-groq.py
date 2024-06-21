@@ -4,9 +4,7 @@ from rich.console import Console
 from rich.panel import Panel
 from datetime import datetime
 import json
-
-# Set up the Groq API client
-from groq import Groq
+from groq import Groq # Set up the Groq API client
 import os
 
 client = Groq(api_key="YOUR API KEY")
