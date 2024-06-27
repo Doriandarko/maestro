@@ -6,9 +6,15 @@ from rich.panel import Panel
 from datetime import datetime
 import json
 from tavily import TavilyClient
+from dotenv import load_dotenv
+
+load_dotenv()  # take environment variables from .env.
+
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+TAVILY_API_KEY = os.environ.get("TAVILY_API_KEY")
 
 # Set up the Anthropic API client
-client = Anthropic(api_key="YOUR KEY")
+client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
 # Available Claude models:
 # Claude 3 Opus     claude-3-opus-20240229
@@ -86,6 +92,55 @@ def opus_orchestrator(objective, file_content=None, previous_results=None, use_s
     console.print(Panel(response_text, title=f"[bold green]Opus Orchestrator[/bold green]", title_align="left", border_style="green", subtitle="Sending task to Haiku 👇"))
     return response_text, file_content, search_query
 
+# def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, use_search=False, continuation=False):
+#     if previous_haiku_tasks is None:
+#         previous_haiku_tasks = []
+
+#     continuation_prompt = "Continuing from the previous answer, please complete the response."
+#     system_message = "Previous Haiku tasks:\n" + "\n".join(f"Task: {task['task']}\nResult: {task['result']}" for task in previous_haiku_tasks)
+#     if continuation:
+#         prompt = continuation_prompt
+
+#     qna_response = None
+#     if search_query and use_search:
+#         # Initialize the Tavily client
+#         tavily = TavilyClient(api_key=TAVILY_API_KEY)
+#         # Perform a QnA search based on the search query
+#         qna_response = tavily.qna_search(query=search_query)
+#         console.print(f"QnA response: {qna_response}", style="yellow")
+
+#     # Prepare the messages array with only the prompt initially
+#     messages = [
+#         {
+#             "role": "user",
+#             "content": [{"type": "text", "text": prompt}]
+#         }
+#     ]
+
+#     # Add search results to the messages if there are any
+#     if qna_response:
+#         messages[0]["content"].append({"type": "text", "text": f"\nSearch Results:\n{qna_response}"})
+
+#     haiku_response = client.messages.create(
+#         model=SUB_AGENT_MODEL,
+#         max_tokens=4096,
+#         messages=messages,
+#         system=system_message
+#     )
+
+#     response_text = haiku_response.content[0].text
+#     console.print(f"Input Tokens: {haiku_response.usage.input_tokens}, Output Tokens: {haiku_response.usage.output_tokens}")
+#     total_cost = calculate_subagent_cost(SUB_AGENT_MODEL, haiku_response.usage.input_tokens, haiku_response.usage.output_tokens)
+#     console.print(f"Sub-agent Cost: ${total_cost:.4f}")
+
+#     if haiku_response.usage.output_tokens >= 4000:  # Threshold set to 4000 as a precaution
+#         console.print("[bold yellow]Warning:[/bold yellow] Output may be truncated. Attempting to continue the response.")
+#         continuation_response_text = haiku_sub_agent(prompt, search_query, previous_haiku_tasks, use_search, continuation=True)
+#         response_text += continuation_response_text
+
+#     console.print(Panel(response_text, title="[bold blue]Haiku Sub-agent Result[/bold blue]", title_align="left", border_style="blue", subtitle="Task completed, sending result to Opus 👇"))
+#     return response_text
+
 def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, use_search=False, continuation=False):
     if previous_haiku_tasks is None:
         previous_haiku_tasks = []
@@ -98,22 +153,25 @@ def haiku_sub_agent(prompt, search_query=None, previous_haiku_tasks=None, use_se
     qna_response = None
     if search_query and use_search:
         # Initialize the Tavily client
-        tavily = TavilyClient(api_key="YOUR API KEY HERE")
+        tavily = TavilyClient(api_key=TAVILY_API_KEY)
         # Perform a QnA search based on the search query
         qna_response = tavily.qna_search(query=search_query)
         console.print(f"QnA response: {qna_response}", style="yellow")
 
-    # Prepare the messages array with only the prompt initially
+    # Prepare the messages array with the prompt and search results (if any)
     messages = [
         {
             "role": "user",
-            "content": [{"type": "text", "text": prompt}]
+            "content": prompt
         }
     ]
 
     # Add search results to the messages if there are any
     if qna_response:
-        messages[0]["content"].append({"type": "text", "text": f"\nSearch Results:\n{qna_response}"})
+        messages.append({
+            "role": "user",
+            "content": f"Search Results:\n{qna_response}"
+        })
 
     haiku_response = client.messages.create(
         model=SUB_AGENT_MODEL,
