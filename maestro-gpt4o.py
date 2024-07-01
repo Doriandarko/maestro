@@ -28,6 +28,7 @@ def calculate_subagent_cost(model, input_tokens, output_tokens):
         "claude-3-opus-20240229": {"input_cost_per_mtok": 15.00, "output_cost_per_mtok": 75.00},
         "claude-3-haiku-20240307": {"input_cost_per_mtok": 0.25, "output_cost_per_mtok": 1.25},
         "claude-3-sonnet-20240229": {"input_cost_per_mtok": 3.00, "output_cost_per_mtok": 15.00},
+        "gpt-4o": {"input_cost_per_mtok": 5.00, "output_cost_per_mtok": 15.00}
     }
 
     # Calculate cost
@@ -61,7 +62,8 @@ def gpt_orchestrator(objective, file_content=None, previous_results=None, use_se
     usage = gpt_response.usage
 
     console.print(Panel(response_text, title=f"[bold green]gpt Orchestrator[/bold green]", title_align="left", border_style="green", subtitle="Sending task to gpt 👇"))
-    console.print(f"Input Tokens: {usage.prompt_tokens}, Output Tokens: {usage.completion_tokens}, Total Tokens: {usage.total_tokens}")
+    total_cost = calculate_subagent_cost(ORCHESTRATOR_MODEL,usage.prompt_tokens,usage.completion_tokens)
+    console.print(f"Input Tokens: {usage.prompt_tokens}, Output Tokens: {usage.completion_tokens}, Total Tokens: {usage.total_tokens}, Total Cost: ${total_cost:.4f}")
 
     search_query = None
     if use_search:
@@ -113,7 +115,8 @@ def gpt_sub_agent(prompt, search_query=None, previous_gpt_tasks=None, use_search
     usage = gpt_response.usage
 
     console.print(Panel(response_text, title="[bold blue]gpt Sub-agent Result[/bold blue]", title_align="left", border_style="blue", subtitle="Task completed, sending result to gpt 👇"))
-    console.print(f"Input Tokens: {usage.prompt_tokens}, Output Tokens: {usage.completion_tokens}, Total Tokens: {usage.total_tokens}")
+    total_cost = calculate_subagent_cost(SUB_AGENT_MODEL,usage.prompt_tokens,usage.completion_tokens)
+    console.print(f"Input Tokens: {usage.prompt_tokens}, Output Tokens: {usage.completion_tokens}, Total Tokens: {usage.total_tokens}, Total Cost: ${total_cost:.4f}")
 
     if usage.completion_tokens >= 4000:  # Threshold set to 4000 as a precaution
         console.print("[bold yellow]Warning:[/bold yellow] Output may be truncated. Attempting to continue the response.")
