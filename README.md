@@ -219,37 +219,6 @@ This script is released under the MIT License.
 - Anthropic for providing the AI models and API.
 - Rich for the beautiful console formatting.
 
-## Flask App Integration
+## Star History
 
-We have now integrated a Flask app to provide a user-friendly interface for interacting with the Maestro framework. This addition allows users to input objectives and view results through a web interface, enhancing the overall usability of the tool.
-
-### Setting Up and Running the Flask App
-
-To set up and run the Flask app, follow these steps:
-
-1. Ensure Flask is installed by running `pip install Flask` or by adding Flask to the `requirements.txt` file and running `pip install -r requirements.txt`.
-2. Navigate to the directory containing the Flask app files (`app.py`, `templates/`, and `static/`).
-3. Run the Flask app by executing `python app.py` in your terminal or command prompt.
-4. Access the web interface by opening a web browser and navigating to `http://localhost:5000/`.
-
-The Flask app supports all features of the Maestro framework, allowing users to input objectives and view the orchestrated task breakdown and execution results in a structured and easy-to-read format.
-
-### UI Features
-
-The Flask app includes the following UI features:
-
-- A form for inputting objectives.
-- A results display area where the orchestrated task breakdown and execution results are shown.
-- Basic styling for improved readability and user experience.
-
-This integration aims to make the Maestro framework more accessible and user-friendly, providing an intuitive way for users to leverage the power of AI-assisted task breakdown and execution.
-
-### Updated Instructions for Running the Flask App
-
-To run the Flask app with the updated file structure, follow these steps:
-
-1. Navigate to the `flask_app` directory.
-2. Execute `python app.py` to start the Flask server.
-3. Access the web interface by navigating to `http://localhost:5000/` in your web browser.
-
-This update ensures that all Flask app-related files are neatly organized within the `flask_app` folder, simplifying the project structure and making it easier to manage.
+[![Star History Chart](https://api.star-history.com/svg?repos=Doriandarko/maestro&type=Date)](https://star-history.com/#Doriandarko/maestro&Date)
