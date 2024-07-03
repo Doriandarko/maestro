@@ -82,14 +82,16 @@ pip install ollama
 ```
 And 
 
-```bash
+```python
 ollama.pull('llama3:70b')
 ```
 This will depend on the model you want to use it, you only need to do it once or if you want to update the model when a new version it's out.
 In the script I am using both versions but you can customize the model you want to use
 
+```python
 ollama.pull('llama3:70b')
 ollama.pull('llama3:8b')
+```
 
 Then
 
